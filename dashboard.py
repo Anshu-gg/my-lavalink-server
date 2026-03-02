@@ -163,8 +163,34 @@ def is_owner():
     if not user:
         return False
         
+    # Highest Priority: Environment variable override
+    env_owner_id = os.getenv("OWNER_ID")
+    if env_owner_id:
+        return str(user["id"]) == str(env_owner_id).strip()
+        
     owner_file = os.path.join(BASE_DIR, "owner.json")
     if not os.path.exists(owner_file):
+        # If no owner.json, fetch the true owner from Discord application info
+        token = os.getenv("DISCORD_TOKEN")
+        if token:
+            try:
+                resp = requests.get(f"{DISCORD_API}/oauth2/applications/@me", headers={"Authorization": f"Bot {token}"}, timeout=10)
+                if resp.status_code == 200:
+                    app_data = resp.json()
+                    real_owner_id = ""
+                    if "team" in app_data and app_data["team"]:
+                        real_owner_id = app_data["team"]["owner_user_id"]
+                    elif "owner" in app_data:
+                        real_owner_id = app_data["owner"]["id"]
+                        
+                    if real_owner_id:
+                        with open(owner_file, "w", encoding="utf-8") as f:
+                            json.dump({"owner_id": real_owner_id}, f, indent=2)
+                        return str(user["id"]) == str(real_owner_id)
+            except Exception:
+                pass
+                
+        # If token fails or is missing, fall back to first login (dangerous on cloud, but backwards compatible locally)
         with open(owner_file, "w", encoding="utf-8") as f:
             json.dump({"owner_id": user["id"]}, f, indent=2)
         return True
