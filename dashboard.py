@@ -179,6 +179,26 @@ def is_authenticated():
     """Check if the logged-in user has selected an active server."""
     return bool(session.get("user") and session.get("active_guild"))
 
+
+def extract_channel_id(input_str):
+    """
+    Extract a channel ID from a raw ID string or a Discord channel URL.
+    Examples:
+      '1478077469150941267' -> '1478077469150941267'
+      'https://discord.com/channels/123/1478077469150941267' -> '1478077469150941267'
+    """
+    input_str = str(input_str).strip()
+    if not input_str:
+        return ""
+    
+    # If it's a URL, split by '/' and take the last part
+    if "discord.com/channels/" in input_str or "ptb.discord.com/channels/" in input_str or "canary.discord.com/channels/" in input_str:
+        parts = input_str.split('/')
+        return parts[-1].strip()
+        
+    return input_str
+
+
 # ─── Routes ───────────────────────────────────────────────────────
 
 @app.route("/")
@@ -471,7 +491,10 @@ def update_config():
     allowed_fields = ["prefix", "nickname_prefix", "welcome_channel_id", "welcome_message"]
     for field in allowed_fields:
         if field in data:
-            cfg[field] = data[field]
+            if field == "welcome_channel_id":
+                cfg[field] = extract_channel_id(data[field])
+            else:
+                cfg[field] = data[field]
 
     save_config(guild_id, cfg)
     return jsonify({"success": True, "config": cfg})
@@ -666,7 +689,7 @@ def create_feedback():
         "description": data.get("description", ""),
         "gift_link": data.get("gift_link", ""),
         "message_text": data.get("message_text", ""),
-        "log_channel_id": data.get("log_channel_id", ""),
+        "log_channel_id": extract_channel_id(data.get("log_channel_id", "")),
         "admin_id": data.get("admin_id", ""),
         "response_prompt": data.get("response_prompt", ""),
         "active": True,
@@ -911,7 +934,7 @@ def send_embed():
     guild_id = session.get("active_guild")
 
     data = request.json
-    channel_id = data.get("channel_id", "").strip()
+    channel_id = extract_channel_id(data.get("channel_id", ""))
     if not channel_id:
         return jsonify({"error": "Channel ID is required"}), 400
 
@@ -1023,7 +1046,7 @@ def edit_discord_message():
     import datetime
     data = request.json
     message_id = str(data.get("message_id", "")).strip()
-    channel_id  = str(data.get("channel_id", "")).strip()
+    channel_id  = extract_channel_id(data.get("channel_id", ""))
     if not message_id or not channel_id:
         return jsonify({"error": "message_id and channel_id are required"}), 400
 
@@ -1151,7 +1174,7 @@ def send_template():
     import datetime
     data        = request.json
     name        = data.get("name", "").strip()
-    channel_id  = str(data.get("channel_id", "")).strip()
+    channel_id  = extract_channel_id(data.get("channel_id", ""))
     if not name or not channel_id:
         return jsonify({"error": "name and channel_id are required"}), 400
 
