@@ -1,0 +1,61 @@
+{
+  "prefix": "!",
+  "nickname_prefix": "AC",
+  "welcome_channel_id": "",
+  "welcome_message": "Welcome to the server, {user}! 🎉 We're glad to have you here!",
+  "owner_id": "1270989983540449304",
+  "dashboard_secret": "change-this-to-a-random-string",
+  "free_gift": {
+    "title": "claim below",
+    "description": "aefas\ns\nad\ns\nds\nad\na",
+    "gift_link": "",
+    "message_text": "hey user here is your gift",
+    "active": false,
+    "embed": {
+      "color": "#ed4245",
+      "author_name": "",
+      "author_icon": "",
+      "thumbnail": "",
+      "image": "https://media.discordapp.net/attachments/1477405643827843241/1477568101007491132/gemini_generated_video_4bde48b6_online-video-cutter.com.gif?ex=69a53c07&is=69a3ea87&hm=0cb47c559350fa34401fbec978b74597df8f67d1ed52f6fc9e17bcf468cd8762&=&width=500&height=208",
+      "footer_text": "",
+      "footer_icon": "",
+      "fields": []
+    },
+    "event_id": "1772398543"
+  },
+  "feedback_gift": {
+    "event_id": "1772401931",
+    "title": "zazazaza",
+    "description": "zazxcewdcre\ncer\nfr\nef\nrf\nrfrrevfev",
+    "gift_link": "",
+    "message_text": "hhhhh",
+    "log_channel_id": "1477784985045041414",
+    "admin_id": "1477405641520975881",
+    "active": false,
+    "embed": {
+      "color": "#ffd700",
+      "author_name": "",
+      "author_icon": "",
+      "thumbnail": "https://cdn.discordapp.com/attachments/1477405643827843241/1477568101007491132/gemini_generated_video_4bde48b6_online-video-cutter.com.gif?ex=69a5e4c7&is=69a49347&hm=e623035c812a841f4085e78f16df9b5a61ce7bc03af3c6f051d8c812e4b5bd07&",
+      "image": "https://cdn.discordapp.com/attachments/1477405643827843241/1477568101007491132/gemini_generated_video_4bde48b6_online-video-cutter.com.gif?ex=69a5e4c7&is=69a49347&hm=e623035c812a841f4085e78f16df9b5a61ce7bc03af3c6f051d8c812e4b5bd07&",
+      "footer_text": "enjoy",
+      "footer_icon": "",
+      "fields": []
+    }
+  },
+  "custom_commands": {
+    "!mute{user}": {
+      "type": "embed",
+      "admin_only": true,
+      "embed": {
+        "title": "{user} is muted",
+        "description": "mutes user",
+        "color": "#ed4245",
+        "image": "https://cdn.discordapp.com/attachments/1477405643827843241/1477568101007491132/gemini_generated_video_4bde48b6_online-video-cutter.com.gif?ex=69a5e4c7&is=69a49347&hm=e623035c812a841f4085e78f16df9b5a61ce7bc03af3c6f051d8c812e4b5bd07&",
+        "thumbnail": "",
+        "footer_text": "",
+        "footer_icon": ""
+      }
+    }
+  }
+}

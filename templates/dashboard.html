@@ -1,0 +1,3467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- CodeMirror CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+</head>
+
+<body>
+    <!-- ─── Sidebar ──────────────────────────────────────────── -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <span class="logo">🤖</span>
+            <div style="display: flex; flex-direction: column;">
+                <h2>Bot Dashboard</h2>
+                {% if active_server %}
+                <span style="font-size: 11px; color: #a3a6aa; margin-top: 2px;">{{ active_server }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <nav>
+            <a href="#" class="nav-item active" data-panel="settings">
+                <span class="nav-icon">⚙️</span> Settings
+            </a>
+            <a href="#" class="nav-item" data-panel="welcome">
+                <span class="nav-icon">👋</span> Welcome
+            </a>
+            <a href="#" class="nav-item" data-panel="embeds">
+                <span class="nav-icon">📝</span> Embeds
+            </a>
+            <a href="#" class="nav-item" data-panel="messages">
+                <span class="nav-icon">💬</span> Messages
+            </a>
+            <a href="#" class="nav-item" data-panel="giveaway">
+                <span class="nav-icon">🎁</span> Giveaways
+            </a>
+            <a href="#" class="nav-item" data-panel="feedback">
+                <span class="nav-icon">💬</span> Response Giveaway
+            </a>
+            <a href="#" class="nav-item" data-panel="claims">
+                <span class="nav-icon">📜</span> Claims Log
+            </a>
+            <a href="#" class="nav-item" data-panel="commands">
+                <span class="nav-icon">🎮</span> Commands
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    {% if user.avatar %}
+                    <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="avatar">
+                    {% else %}
+                    <span>{{ user.global_name[0] }}</span>
+                    {% endif %}
+                </div>
+                <div class="user-name">{{ user.global_name }}</div>
+            </div>
+            {% if is_owner %}
+            <a href="/admin" class="logout-btn" style="border-color: #5865F2; color: #5865F2;">Global Admin</a>
+            {% endif %}
+            <a href="/servers" class="logout-btn" style="background-color: rgba(255,255,255,0.05);">Switch Server</a>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </aside>
+
+    <!-- ─── Main Content ─────────────────────────────────────── -->
+    <main class="content">
+        <!-- Toast notification -->
+        <div id="toast" class="toast hidden"></div>
+
+        <!-- ─── Settings Panel ──────────────────────────────── -->
+        <section id="panel-settings" class="panel active">
+            <div class="panel-header">
+                <h1>⚙️ Bot Settings</h1>
+                <p>Manage your bot's prefix and nickname settings</p>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <h3>Command Prefix</h3>
+                    <p class="card-desc">The character(s) users type before commands</p>
+                    <div class="input-group">
+                        <input type="text" id="prefix" value="{{ config.prefix }}" maxlength="5" placeholder="!">
+                        <button onclick="saveSettings()" class="btn-primary">Save</button>
+                    </div>
+                    <div class="card-hint">Example: if prefix is <code id="prefix-preview">{{ config.prefix }}</code>,
+                        users type <code><span id="prefix-example">{{ config.prefix }}</span>help</code></div>
+                </div>
+                <div class="card">
+                    <h3>Nickname Prefix</h3>
+                    <p class="card-desc">Automatically added to new members' nicknames</p>
+                    <div class="input-group">
+                        <input type="text" id="nickname_prefix" value="{{ config.nickname_prefix }}" maxlength="10"
+                            placeholder="AC">
+                        <button onclick="saveSettings()" class="btn-primary">Save</button>
+                    </div>
+                    <div class="card-hint">Example: user "anshu" becomes "<strong id="nick-preview">{{
+                            config.nickname_prefix }} anshu</strong>"</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Welcome Panel ───────────────────────────────── -->
+        <section id="panel-welcome" class="panel">
+            <div class="panel-header">
+                <h1>👋 Welcome System</h1>
+                <p>Configure what happens when new members join your server</p>
+            </div>
+            <div class="cards-grid">
+                <div class="card full-width">
+                    <h3>Welcome Channel</h3>
+                    <p class="card-desc">Enter the channel ID where welcome messages will be sent</p>
+                    <div class="input-group">
+                        <input type="text" id="welcome_channel_id" value="{{ config.welcome_channel_id }}"
+                            placeholder="Paste channel ID here">
+                        <button onclick="saveSettings()" class="btn-primary">Save</button>
+                    </div>
+                    <div class="card-hint">
+                        Right-click a channel in Discord → Copy Channel ID
+                        <br>(Enable Developer Mode in Discord Settings → Advanced)
+                    </div>
+                </div>
+                <div class="card full-width">
+                    <h3>Welcome Message</h3>
+                    <p class="card-desc">The message shown when a new member joins. Use <code>{user}</code> to mention
+                        them.</p>
+                    <textarea id="welcome_message" rows="3"
+                        placeholder="Welcome to the server, {user}! 🎉">{{ config.welcome_message }}</textarea>
+                    <div class="textarea-actions">
+                        <button onclick="saveSettings()" class="btn-primary">Save Message</button>
+                    </div>
+                    <div class="card-hint">Preview: "{{ config.welcome_message | replace('{user}', '@anshu') }}"</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Embed Builder Panel ─────────────────────────── -->
+        <section id="panel-embeds" class="panel">
+            <div class="panel-header">
+                <h1>📝 Embed Builder</h1>
+                <p>Visually design and send rich embeds to any channel</p>
+            </div>
+
+            <div class="embed-builder-layout">
+                <!-- Editor Side -->
+                <div class="embed-editor">
+                    <!-- Mode Toggle -->
+                    <div class="editor-mode-toggle">
+                        <button class="mode-btn active" onclick="switchEditorMode('embed', 'visual', this)">📝
+                            Visual</button>
+                        <button class="mode-btn" onclick="switchEditorMode('embed', 'json', this)">📋 JSON</button>
+                        <button class="mode-btn" onclick="switchEditorMode('embed', 'log', this)">🕓 Log</button>
+                    </div>
+                    <div id="embed-visual-editor" class="visual-editor-container active">
+                        <!-- Channel Target -->
+                        <div class="card">
+                            <h3>📤 Send To Channel</h3>
+                            <div class="form-group">
+                                <label for="embed_channel_id">Channel ID</label>
+                                <input type="text" id="embed_channel_id" placeholder="Paste channel ID here">
+                            </div>
+                            <div class="form-group">
+                                <label for="embed_message_content">Message Text <span class="optional">(above the
+                                        embed)</span></label>
+                                <input type="text" id="embed_message_content" placeholder="Optional text message"
+                                    oninput="updatePreview()">
+                            </div>
+                        </div>
+
+                        <!-- Author -->
+                        <div class="card">
+                            <h3>Author</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="embed_author_name">Author Name</label>
+                                    <input type="text" id="embed_author_name" placeholder="Author name"
+                                        oninput="updatePreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="embed_author_icon">Author Icon URL</label>
+                                    <input type="text" id="embed_author_icon" placeholder="https://..."
+                                        oninput="updatePreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="card">
+                            <h3>Body</h3>
+                            <div class="form-group">
+                                <label for="embed_title">Title</label>
+                                <input type="text" id="embed_title" placeholder="Embed title" oninput="updatePreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="embed_description">Description</label>
+                                <textarea id="embed_description" rows="3"
+                                    placeholder="Embed description... supports **bold**, *italic*, __underline__"
+                                    oninput="updatePreview()"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="embed_color">Color</label>
+                                <div class="color-picker-row">
+                                    <input type="color" id="embed_color" value="#5865F2" oninput="updatePreview()">
+                                    <span class="color-hex" id="color-hex-label">#5865F2</span>
+                                    <div class="color-presets">
+                                        <button class="color-dot" style="background:#5865F2"
+                                            onclick="setColor('#5865F2')"></button>
+                                        <button class="color-dot" style="background:#57F287"
+                                            onclick="setColor('#57F287')"></button>
+                                        <button class="color-dot" style="background:#FEE75C"
+                                            onclick="setColor('#FEE75C')"></button>
+                                        <button class="color-dot" style="background:#ED4245"
+                                            onclick="setColor('#ED4245')"></button>
+                                        <button class="color-dot" style="background:#EB459E"
+                                            onclick="setColor('#EB459E')"></button>
+                                        <button class="color-dot" style="background:#FFFFFF"
+                                            onclick="setColor('#FFFFFF')"></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fields -->
+                        <div class="card">
+                            <h3>Fields</h3>
+                            <div id="fields-container"></div>
+                            <button onclick="addField()" class="btn-secondary btn-full">+ Add Field</button>
+                        </div>
+
+                        <!-- Images -->
+                        <div class="card">
+                            <h3>Images</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="embed_thumbnail">Thumbnail URL</label>
+                                    <input type="text" id="embed_thumbnail" placeholder="https://..."
+                                        oninput="updatePreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="embed_image">Large Image URL</label>
+                                    <input type="text" id="embed_image" placeholder="https://..."
+                                        oninput="updatePreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="card">
+                            <h3>Footer</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="embed_footer_text">Footer Text</label>
+                                    <input type="text" id="embed_footer_text" placeholder="Footer text"
+                                        oninput="updatePreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="embed_footer_icon">Footer Icon URL</label>
+                                    <input type="text" id="embed_footer_icon" placeholder="https://..."
+                                        oninput="updatePreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="embed-actions">
+                            <button onclick="sendEmbed()" class="btn-primary btn-full">📤 Send Embed</button>
+                            <button onclick="clearEmbed()" class="btn-danger btn-full" style="margin-top:8px">Clear
+                                All</button>
+                        </div>
+                    </div><!-- /embed-visual-editor -->
+
+                    <!-- JSON Editor (hidden by default) -->
+                    <div id="embed-json-editor" class="json-editor-container">
+                        <div class="card">
+                            <h3>📋 JSON Editor</h3>
+                            <p class="card-desc">Edit the raw Discord message JSON directly</p>
+                            <div class="json-toolbar">
+                                <button class="json-btn" onclick="formatJson('embed')">⚡ Format</button>
+                                <button class="json-btn" onclick="copyJson('embed')">📋 Copy</button>
+                                <button class="json-btn" onclick="pasteJson('embed')">📥 Paste</button>
+                                <span id="embed-json-status" class="json-status valid">✓ Valid</span>
+                            </div>
+                            <div class="json-editor-wrap">
+                                <textarea id="embed-json-textarea"></textarea>
+                            </div>
+                            <div id="embed-json-error" class="json-error-detail"></div>
+                        </div>
+                        <div class="card" style="margin-top:16px">
+                            <h3>📤 Send To Channel</h3>
+                            <div class="form-group">
+                                <label for="embed_json_channel_id">Channel ID</label>
+                                <input type="text" id="embed_json_channel_id" placeholder="Paste channel ID here">
+                            </div>
+                        </div>
+                        <div class="embed-actions" style="margin-top:16px">
+                            <button onclick="sendJsonEmbed('embed')" class="btn-primary btn-full">📤 Send JSON
+                                Message</button>
+                            <button onclick="clearJsonEditor('embed')" class="btn-danger btn-full"
+                                style="margin-top:8px">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="embed-preview-wrapper" id="embed-preview-wrapper">
+                    <h3 class="preview-title">Live Preview</h3>
+                    <div class="discord-embed-preview">
+                        <div class="preview-bot-msg">
+                            <div class="preview-bot-header">
+                                <span class="preview-bot-avatar">🤖</span>
+                                <span class="preview-bot-name">Your Bot <span class="preview-bot-tag">BOT</span></span>
+                            </div>
+                            <div class="preview-message-text" id="preview-message" style="display:none"></div>
+                        </div>
+                        <div class="embed-preview-card" id="embed-preview">
+                            <div class="embed-color-bar" id="preview-color-bar"></div>
+                            <div class="embed-content">
+                                <div class="embed-body">
+                                    <div class="embed-author" id="preview-author" style="display:none">
+                                        <img class="embed-author-icon" id="preview-author-icon" src=""
+                                            style="display:none" onerror="this.style.display='none'">
+                                        <span id="preview-author-name"></span>
+                                    </div>
+                                    <div class="embed-title-text" id="preview-title" style="display:none"></div>
+                                    <div class="embed-desc" id="preview-desc" style="display:none"></div>
+                                    <div class="embed-fields" id="preview-fields"></div>
+                                    <div class="embed-img-wrapper" id="preview-image-wrapper" style="display:none">
+                                        <img class="embed-img" id="preview-image" src=""
+                                            onerror="this.parentElement.style.display='none'">
+                                    </div>
+                                </div>
+                                <div class="embed-thumb" id="preview-thumb-wrapper" style="display:none">
+                                    <img id="preview-thumb" src="" onerror="this.parentElement.style.display='none'">
+                                </div>
+                            </div>
+                            <div class="embed-footer-section" id="preview-footer" style="display:none">
+                                <img class="embed-footer-icon" id="preview-footer-icon" src="" style="display:none"
+                                    onerror="this.style.display='none'">
+                                <span id="preview-footer-text"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── Log mode container (inside editor, shown when Log button active) ─── -->
+                <div id="embed-log-container" class="visual-editor-container" style="display:none">
+                    <div class="card">
+                        <div class="msg-log-header" style="margin-bottom:12px">
+                            <h3>📋 Sent Messages</h3>
+                            <button class="msg-log-refresh" onclick="loadMessageLog()">↻ Refresh</button>
+                        </div>
+                        <!-- Edit mode banner -->
+                        <div class="msg-log-editing-banner" id="msg-edit-banner">
+                            ✏️ <span id="msg-edit-label">Editing message…</span>
+                            <button class="msg-log-cancel-edit" onclick="cancelEditMode()">✕ Cancel</button>
+                        </div>
+                        <div class="msg-log-list" id="msg-log-list">
+                            <div class="msg-log-empty">📭 No messages sent yet.<br>Send an embed to see it here.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ─── Messages Hub Panel ─────────────────────────── -->
+        <section id="panel-messages" class="panel">
+            <div class="panel-header">
+                <h1>💬 Messages</h1>
+                <p>Create and manage message templates to send to any channel</p>
+            </div>
+
+            <!-- ── View: Hub landing ────────────────────────── -->
+            <div id="msg-view-hub" class="messages-hub">
+                <!-- Templates card -->
+                <div class="hub-category-card" onclick="showMsgView('list')">
+                    <div class="hub-category-icon">📄</div>
+                    <div class="hub-category-text">
+                        <h3>Templates</h3>
+                        <p>Create custom messages and send them to any channel.</p>
+                    </div>
+                    <button class="hub-category-btn" onclick="event.stopPropagation(); openNewTemplate()">Create new
+                        template</button>
+                </div>
+                <!-- Send message command card -->
+                <div class="hub-category-card" onclick="showMsgView('list')">
+                    <div class="hub-category-icon">📤</div>
+                    <div class="hub-category-text">
+                        <h3>Send message command</h3>
+                        <p>Options for sending messages and embeds to Discord channels.</p>
+                    </div>
+                    <span class="hub-category-chevron">›</span>
+                </div>
+                <!-- Default messages card -->
+                <div class="hub-category-card">
+                    <div class="hub-category-icon">📋</div>
+                    <div class="hub-category-text">
+                        <h3>Default messages</h3>
+                        <p>Every message sent by the bot can be customized here.</p>
+                    </div>
+                    <span class="hub-category-chevron">›</span>
+                </div>
+            </div>
+
+            <!-- ── View: Templates list ──────────────────────── -->
+            <div id="msg-view-list" style="display:none">
+                <div
+                    style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--text-muted)">
+                    <a onclick="showMsgView('hub')" style="color:var(--accent);cursor:pointer">💬 Messages</a>
+                    <span>›</span>
+                    <span>Templates</span>
+                </div>
+                <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+                    Create custom messages to send them manually or scheduled.<br>
+                    <em>Click on a template to edit it.</em>
+                </p>
+
+                <div class="tmpl-list-header">
+                    <div class="tmpl-search-bar">
+                        <span class="tmpl-search-icon">🔍</span>
+                        <input type="text" id="tmpl-search" placeholder="Search" oninput="filterTemplates()">
+                    </div>
+                    <div class="tmpl-count">
+                        <span id="tmpl-count-label">0</span>/50
+                        <a class="plus-btn" onclick="openNewTemplate()" title="New template">+</a>
+                    </div>
+                    <button class="hub-category-btn" onclick="openNewTemplate()">Create new template</button>
+                </div>
+
+                <div class="tmpl-rows" id="tmpl-rows">
+                    <div class="tmpl-empty-state">📭 No templates yet.<br>Click <strong>Create new template</strong> to
+                        get started.</div>
+                </div>
+            </div>
+
+            <!-- ── View: Template editor ─────────────────────── -->
+            <div id="msg-view-editor" style="display:none">
+                <!-- Breadcrumb -->
+                <div class="tmpl-editor-breadcrumb">
+                    <a onclick="showMsgView('hub')">💬 Messages</a>
+                    <span class="sep">›</span>
+                    <a onclick="showMsgView('list')">Templates</a>
+                    <span class="sep">›</span>
+                    <span id="tmpl-editor-breadname">New template</span>
+                </div>
+
+                <!-- Template name -->
+                <div class="tmpl-name-row">
+                    <input type="text" class="tmpl-name-input" id="tmpl-name-input" placeholder="Template name…">
+                </div>
+
+                <!-- Sub-tabs: Visual / Raw (no Preview tab — preview is always visible on the right) -->
+                <div class="tmpl-subtab-bar">
+                    <button class="tmpl-subtab active" onclick="switchTmplSubtab('visual', this)">Visual</button>
+                    <button class="tmpl-subtab" onclick="switchTmplSubtab('raw', this)">Raw</button>
+                </div>
+
+                <!-- Side-by-side: Edit left, Preview right -->
+                <div style="display:flex;gap:20px;align-items:flex-start">
+
+                    <!-- LEFT: editor -->
+                    <div style="flex:1;min-width:0">
+                        <!-- Visual editor -->
+                        <div id="tmpl-subtab-visual">
+                            <div class="card">
+                                <h3>Message Content</h3>
+                                <div class="form-group">
+                                    <label>Text above embed</label>
+                                    <input type="text" id="tmpl_content" placeholder="Optional message text"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                            </div>
+                            <div class="card" style="margin-top:12px">
+                                <h3>Embed</h3>
+                                <div class="form-group">
+                                    <label>Title</label>
+                                    <input type="text" id="tmpl_title" placeholder="Embed title"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <textarea id="tmpl_description" rows="3" placeholder="Embed description…"
+                                        oninput="updateTmplPreview()"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Color</label>
+                                    <input type="color" id="tmpl_color" value="#5865F2"
+                                        style="width:50px;height:32px;border:none;background:none;cursor:pointer"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Author Name</label>
+                                    <input type="text" id="tmpl_author_name" placeholder="Author"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Thumbnail URL</label>
+                                    <input type="text" id="tmpl_thumbnail" placeholder="https://…"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Image URL</label>
+                                    <input type="text" id="tmpl_image" placeholder="https://…"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Footer Text</label>
+                                    <input type="text" id="tmpl_footer_text" placeholder="Footer text"
+                                        oninput="updateTmplPreview()">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:16px">
+                                <button onclick="saveTmplFromVisual()" class="btn-primary">💾 Save Template</button>
+                                <button onclick="showMsgView('list')" class="btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+
+                        <!-- Raw (JSON) editor -->
+                        <div id="tmpl-subtab-raw" style="display:none">
+                            <div class="json-editor-container active">
+                                <div class="json-toolbar">
+                                    <button class="json-tool-btn" onclick="formatTmplJson()">⚡ Format</button>
+                                    <button class="json-tool-btn" onclick="copyTmplJson()">📋 Copy</button>
+                                    <span id="tmpl-json-valid" class="json-status valid">✓ Valid</span>
+                                </div>
+                                <div id="tmpl-cm-wrapper"><textarea id="tmpl-json-textarea"></textarea></div>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:12px">
+                                <button onclick="saveTmplFromJson()" class="btn-primary">💾 Save Template</button>
+                                <button onclick="showMsgView('list')" class="btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+                    </div><!-- /left -->
+
+                    <!-- RIGHT: always-visible live preview -->
+                    <div style="width:340px;flex-shrink:0" id="tmpl-preview-col">
+                        <div class="embed-preview-wrapper" style="width:100%">
+                            <h3 class="preview-title">Live Preview</h3>
+                            <div class="discord-embed-preview">
+                                <div class="preview-bot-msg">
+                                    <div class="preview-bot-header">
+                                        <span class="preview-bot-avatar">🤖</span>
+                                        <span class="preview-bot-name">Your Bot <span
+                                                class="preview-bot-tag">BOT</span></span>
+                                    </div>
+                                    <div class="preview-message-text" id="tmpl-preview-content" style="display:none">
+                                    </div>
+                                </div>
+                                <div class="embed-preview-card" id="tmpl-embed-preview">
+                                    <div class="embed-color-bar" id="tmpl-preview-color-bar"></div>
+                                    <div class="embed-content">
+                                        <div class="embed-body">
+                                            <div class="embed-author" id="tmpl-preview-author" style="display:none">
+                                                <span id="tmpl-preview-author-name"></span>
+                                            </div>
+                                            <div class="embed-title-text" id="tmpl-preview-title" style="display:none">
+                                            </div>
+                                            <div class="embed-desc" id="tmpl-preview-desc" style="display:none"></div>
+                                            <div class="embed-img-wrapper" id="tmpl-preview-image-wrapper"
+                                                style="display:none">
+                                                <img class="embed-img" id="tmpl-preview-image" src=""
+                                                    onerror="this.parentElement.style.display='none'">
+                                            </div>
+                                        </div>
+                                        <div class="embed-thumb" id="tmpl-preview-thumb-wrapper" style="display:none">
+                                            <img id="tmpl-preview-thumb" src=""
+                                                onerror="this.parentElement.style.display='none'">
+                                        </div>
+                                    </div>
+                                    <div class="embed-footer-section" id="tmpl-preview-footer" style="display:none">
+                                        <span id="tmpl-preview-footer-text"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Use / Send section below preview -->
+                        <div class="card" style="margin-top:14px">
+                            <h3>📤 Send to Channel</h3>
+                            <div class="form-group" style="margin-bottom:10px">
+                                <label for="tmpl-send-channel">Channel ID</label>
+                                <input type="text" id="tmpl-send-channel" placeholder="Paste channel ID here">
+                            </div>
+                            <button onclick="sendCurrentTemplate()" class="btn-primary btn-full">📤 Send to
+                                Discord</button>
+                        </div>
+                    </div><!-- /right -->
+
+                </div><!-- /side-by-side -->
+            </div>
+        </section>
+
+        <!-- ─── Giveaway Panel ──────────────────────────────── -->
+        <section id="panel-giveaway" class="panel">
+            <div class="panel-header">
+                <h1>🎁 Giveaway Manager</h1>
+                <p>Design a custom embed and send it as a DM when users type <code>!free</code></p>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar" id="giveaway-status">
+                {% if config.get('free_gift', {}).get('active') %}
+                <div class="status-active">
+                    <span class="status-dot active"></span>
+                    <strong>Active Giveaway:</strong> {{ config.free_gift.title }}
+                    <span class="claim-badge">{{ claims_count }} claimed</span>
+                    <button onclick="stopGiveaway()" class="btn-danger btn-sm">Stop</button>
+                </div>
+                {% else %}
+                <div class="status-inactive">
+                    <span class="status-dot"></span>
+                    No active giveaway
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Two-column layout like the Embed Builder -->
+            <div class="embed-builder-layout">
+                <!-- Editor Side -->
+                <div class="embed-editor">
+                    <!-- Mode Toggle -->
+                    <div class="editor-mode-toggle">
+                        <button class="mode-btn active" onclick="switchEditorMode('gift', 'visual', this)">📝
+                            Visual</button>
+                        <button class="mode-btn" onclick="switchEditorMode('gift', 'json', this)">📋 JSON</button>
+                    </div>
+                    <div id="gift-visual-editor" class="visual-editor-container active">
+                        <!-- Message + Title & Description -->
+                        <div class="card">
+                            <h3>📝 Content</h3>
+                            <div class="form-group">
+                                <label for="gift_message">Message Text <span class="optional">(appears above the
+                                        embed)</span></label>
+                                <input type="text" id="gift_message" placeholder="Hey! Here's your free gift 🎉"
+                                    oninput="updateGiftPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="gift_title">Embed Title</label>
+                                <input type="text" id="gift_title" placeholder="e.g. Free Discord Nitro"
+                                    oninput="updateGiftPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="gift_description">Embed Description</label>
+                                <textarea id="gift_description" rows="3" placeholder="Describe what the gift is..."
+                                    oninput="updateGiftPreview()"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="gift_link">Gift Link / Code <span class="optional">(shown as a field in the
+                                        DM)</span></label>
+                                <input type="text" id="gift_link" placeholder="https://gift-link.com or CODE123"
+                                    oninput="updateGiftPreview()">
+                            </div>
+                        </div>
+
+                        <!-- Color -->
+                        <div class="card">
+                            <h3>🎨 Color</h3>
+                            <div class="color-picker-row">
+                                <input type="color" id="gift_color" value="#FFD700" oninput="updateGiftPreview()">
+                                <span class="color-hex" id="gift-color-label">#FFD700</span>
+                                <div class="color-presets">
+                                    <button type="button" class="color-dot" style="background:#FFD700"
+                                        onclick="setGiftColor('#FFD700')"></button>
+                                    <button type="button" class="color-dot" style="background:#5865F2"
+                                        onclick="setGiftColor('#5865F2')"></button>
+                                    <button type="button" class="color-dot" style="background:#57F287"
+                                        onclick="setGiftColor('#57F287')"></button>
+                                    <button type="button" class="color-dot" style="background:#ED4245"
+                                        onclick="setGiftColor('#ED4245')"></button>
+                                    <button type="button" class="color-dot" style="background:#EB459E"
+                                        onclick="setGiftColor('#EB459E')"></button>
+                                    <button type="button" class="color-dot" style="background:#FFFFFF"
+                                        onclick="setGiftColor('#FFFFFF')"></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Author -->
+                        <div class="card">
+                            <h3>Author</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="gift_author_name">Name</label>
+                                    <input type="text" id="gift_author_name" placeholder="Author name"
+                                        oninput="updateGiftPreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="gift_author_icon">Icon URL</label>
+                                    <input type="text" id="gift_author_icon" placeholder="https://..."
+                                        oninput="updateGiftPreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fields -->
+                        <div class="card">
+                            <h3>Fields</h3>
+                            <div id="gift-fields-container"></div>
+                            <button type="button" onclick="addGiftField()" class="btn-secondary btn-full">+ Add
+                                Field</button>
+                        </div>
+
+                        <!-- Images -->
+                        <div class="card">
+                            <h3>Images</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="gift_thumbnail">Thumbnail URL</label>
+                                    <input type="text" id="gift_thumbnail" placeholder="https://..."
+                                        oninput="updateGiftPreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="gift_image">Large Image URL</label>
+                                    <input type="text" id="gift_image" placeholder="https://..."
+                                        oninput="updateGiftPreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="card">
+                            <h3>Footer</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="gift_footer_text">Text</label>
+                                    <input type="text" id="gift_footer_text" placeholder="Enjoy your gift!"
+                                        oninput="updateGiftPreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="gift_footer_icon">Icon URL</label>
+                                    <input type="text" id="gift_footer_icon" placeholder="https://..."
+                                        oninput="updateGiftPreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Launch -->
+                        <div class="embed-actions">
+                            <button onclick="createGiveaway()" class="btn-primary btn-full">🎁 Launch Giveaway</button>
+                            <button onclick="stopGiveaway()" class="btn-danger btn-full" style="margin-top:8px">🛑 Stop
+                                Giveaway</button>
+                            <button onclick="resetClaims()" class="btn-secondary btn-full" style="margin-top:8px">🔄
+                                Reset
+                                Claims (Keep Giveaway Active)</button>
+                            <button onclick="clearGiveawayEmbed()" class="btn-danger btn-full" style="margin-top:8px">🧹
+                                Clear Embed</button>
+                            <div class="card-hint" style="margin-top:8px; text-align:center">Launch resets claims
+                                automatically. Use Reset Claims to let users claim again without changing the embed.
+                            </div>
+                        </div>
+                    </div><!-- /gift-visual-editor -->
+
+                    <!-- JSON Editor for Giveaway -->
+                    <div id="gift-json-editor" class="json-editor-container">
+                        <div class="card">
+                            <h3>📋 JSON Editor</h3>
+                            <p class="card-desc">Edit the raw giveaway embed JSON directly</p>
+                            <div class="json-toolbar">
+                                <button class="json-btn" onclick="formatJson('gift')">⚡ Format</button>
+                                <button class="json-btn" onclick="copyJson('gift')">📋 Copy</button>
+                                <button class="json-btn" onclick="pasteJson('gift')">📥 Paste</button>
+                                <span id="gift-json-status" class="json-status valid">✓ Valid</span>
+                            </div>
+                            <div class="json-editor-wrap">
+                                <textarea id="gift-json-textarea"></textarea>
+                            </div>
+                            <div id="gift-json-error" class="json-error-detail"></div>
+                        </div>
+                        <div class="embed-actions" style="margin-top:16px">
+                            <button onclick="launchGiveawayFromJson()" class="btn-primary btn-full">🎁 Launch Giveaway
+                                from JSON</button>
+                            <button onclick="stopGiveaway()" class="btn-danger btn-full" style="margin-top:8px">🛑 Stop
+                                Giveaway</button>
+                            <button onclick="resetClaims()" class="btn-secondary btn-full" style="margin-top:8px">🔄
+                                Reset Claims</button>
+                            <button onclick="clearJsonEditor('gift')" class="btn-danger btn-full"
+                                style="margin-top:8px">🧹 Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Preview Side -->
+                <div class="embed-preview-wrapper">
+                    <h3 class="preview-title">Live DM Preview</h3>
+                    <div class="discord-embed-preview">
+                        <div class="preview-bot-msg">
+                            <div class="preview-bot-header">
+                                <span class="preview-bot-avatar">🤖</span>
+                                <span class="preview-bot-name">Your Bot <span class="preview-bot-tag">BOT</span></span>
+                            </div>
+                            <div class="preview-message-text" id="gift-preview-message" style="display:none"></div>
+                        </div>
+                        <div class="embed-preview-card" id="gift-preview">
+                            <div class="embed-color-bar" id="gift-preview-color-bar" style="background:#FFD700"></div>
+                            <div class="embed-content">
+                                <div class="embed-body">
+                                    <div class="embed-author" id="gift-preview-author" style="display:none">
+                                        <img class="embed-author-icon" id="gift-preview-author-icon" src=""
+                                            style="display:none">
+                                        <span id="gift-preview-author-name"></span>
+                                    </div>
+                                    <div class="embed-title-text" id="gift-preview-title">🎁 Your Gift Title</div>
+                                    <div class="embed-desc" id="gift-preview-desc" style="display:none"></div>
+                                    <div class="embed-fields" id="gift-preview-fields"></div>
+                                    <div class="embed-img-wrapper" id="gift-preview-image-wrapper" style="display:none">
+                                        <img class="embed-img" id="gift-preview-image" src="">
+                                    </div>
+                                </div>
+                                <div class="embed-thumb" id="gift-preview-thumb-wrapper" style="display:none">
+                                    <img id="gift-preview-thumb" src=""
+                                        onerror="this.parentElement.style.display='none'">
+                                </div>
+                            </div>
+                            <div class="embed-footer-section" id="gift-preview-footer" style="display:none">
+                                <img class="embed-footer-icon" id="gift-preview-footer-icon" src=""
+                                    style="display:none">
+                                <span id="gift-preview-footer-text"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Feedback Panel ──────────────────────────────── -->
+        <section id="panel-feedback" class="panel">
+            <div class="panel-header">
+                <h1>🎁 Feedback Reward Manager</h1>
+                <p>Design a custom embed and send it as a DM when users type <code>!reward</code></p>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar" id="feedback-status">
+                {% if config.get('feedback_gift', {}).get('active') %}
+                <div class="status-active">
+                    <span class="status-dot active"></span>
+                    <strong>Active Feedback Event:</strong> {{ config.feedback_gift.title }}
+                    <span class="claim-badge">{{ claims_count }} claimed</span>
+                    <button onclick="stopFeedback()" class="btn-danger btn-sm">Stop</button>
+                </div>
+                {% else %}
+                <div class="status-inactive">
+                    <span class="status-dot"></span>
+                    No active feedback event
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Two-column layout like the Embed Builder -->
+            <div class="embed-builder-layout">
+                <!-- Editor Side -->
+                <div class="embed-editor">
+                    <!-- Mode Toggle -->
+                    <div class="editor-mode-toggle">
+                        <button class="mode-btn active" onclick="switchEditorMode('fb', 'visual', this)">📝
+                            Visual</button>
+                        <button class="mode-btn" onclick="switchEditorMode('fb', 'json', this)">📋 JSON</button>
+                    </div>
+                    <div id="fb-visual-editor" class="visual-editor-container active">
+                        <!-- Message + Title & Description -->
+                        <div class="card">
+                            <h3>📝 Content</h3>
+                            <div class="form-group">
+                                <label for="fb_message">Message Text <span class="optional">(appears above the
+                                        embed)</span></label>
+                                <input type="text" id="fb_message" placeholder="Hey! Here's your free gift 🎉"
+                                    oninput="updateFbPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb_title">Embed Title</label>
+                                <input type="text" id="fb_title" placeholder="e.g. Free Discord Nitro"
+                                    oninput="updateFbPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb_description">Embed Description</label>
+                                <textarea id="fb_description" rows="3" placeholder="Describe what the gift is..."
+                                    oninput="updateFbPreview()"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="fb_link">Gift Link / Code <span class="optional">(shown as a field in the
+                                        DM)</span></label>
+                                <input type="text" id="fb_link" placeholder="https://gift-link.com or CODE123"
+                                    oninput="updateFbPreview()">
+                            </div>
+                        </div>
+
+
+                        <div class="card">
+                            <h3>🔗 Logging Setup</h3>
+                            <div class="form-group">
+                                <label for="fb_log_channel">Log Channel ID</label>
+                                <input type="text" id="fb_log_channel" placeholder="Where to send user responses"
+                                    value="{{ config.get('feedback_gift', {}).get('log_channel_id', '') }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb_admin_id">Admin User ID</label>
+                                <input type="text" id="fb_admin_id" placeholder="Who to ping when they respond"
+                                    value="{{ config.get('feedback_gift', {}).get('admin_id', '') }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb_response_prompt">Response Prompt <span class="optional">(message asking
+                                        user
+                                        for feedback after claiming)</span></label>
+                                <input type="text" id="fb_response_prompt"
+                                    placeholder="Please reply to this DM with your feedback/response!"
+                                    value="{{ config.get('feedback_gift', {}).get('response_prompt', '') }}">
+                            </div>
+                        </div>
+
+                        <!-- Color -->
+                        <div class="card">
+                            <h3>🎨 Color</h3>
+                            <div class="color-picker-row">
+                                <input type="color" id="fb_color" value="#FFD700" oninput="updateFbPreview()">
+                                <span class="color-hex" id="fb-color-label">#FFD700</span>
+                                <div class="color-presets">
+                                    <button type="button" class="color-dot" style="background:#FFD700"
+                                        onclick="setFbColor('#FFD700')"></button>
+                                    <button type="button" class="color-dot" style="background:#5865F2"
+                                        onclick="setFbColor('#5865F2')"></button>
+                                    <button type="button" class="color-dot" style="background:#57F287"
+                                        onclick="setFbColor('#57F287')"></button>
+                                    <button type="button" class="color-dot" style="background:#ED4245"
+                                        onclick="setFbColor('#ED4245')"></button>
+                                    <button type="button" class="color-dot" style="background:#EB459E"
+                                        onclick="setFbColor('#EB459E')"></button>
+                                    <button type="button" class="color-dot" style="background:#FFFFFF"
+                                        onclick="setFbColor('#FFFFFF')"></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Author -->
+                        <div class="card">
+                            <h3>Author</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="fb_author_name">Name</label>
+                                    <input type="text" id="fb_author_name" placeholder="Author name"
+                                        oninput="updateFbPreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="fb_author_icon">Icon URL</label>
+                                    <input type="text" id="fb_author_icon" placeholder="https://..."
+                                        oninput="updateFbPreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fields -->
+                        <div class="card">
+                            <h3>Fields</h3>
+                            <div id="fb-fields-container"></div>
+                            <button type="button" onclick="addFbField()" class="btn-secondary btn-full">+ Add
+                                Field</button>
+                        </div>
+
+                        <!-- Images -->
+                        <div class="card">
+                            <h3>Images</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="fb_thumbnail">Thumbnail URL</label>
+                                    <input type="text" id="fb_thumbnail" placeholder="https://..."
+                                        oninput="updateFbPreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="fb_image">Large Image URL</label>
+                                    <input type="text" id="fb_image" placeholder="https://..."
+                                        oninput="updateFbPreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="card">
+                            <h3>Footer</h3>
+                            <div class="form-row">
+                                <div class="form-group flex-1">
+                                    <label for="fb_footer_text">Text</label>
+                                    <input type="text" id="fb_footer_text" placeholder="Enjoy your gift!"
+                                        oninput="updateFbPreview()">
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="fb_footer_icon">Icon URL</label>
+                                    <input type="text" id="fb_footer_icon" placeholder="https://..."
+                                        oninput="updateFbPreview()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Launch -->
+                        <div class="embed-actions">
+                            <button onclick="createFeedback()" class="btn-primary btn-full">🎁 Launch Feedback
+                                Reward</button>
+                            <button onclick="stopFeedback()" class="btn-danger btn-full" style="margin-top:8px">🛑 Stop
+                                Giveaway</button>
+                            <button onclick="resetFbClaims()" class="btn-secondary btn-full" style="margin-top:8px">🔄
+                                Reset
+                                Claims (Keep Giveaway Active)</button>
+                            <button onclick="clearFeedbackEmbed()" class="btn-danger btn-full" style="margin-top:8px">🧹
+                                Clear Embed</button>
+                            <div class="card-hint" style="margin-top:8px; text-align:center">Launch resets claims
+                                automatically. Use Reset Claims to let users claim again without changing the embed.
+                            </div>
+                        </div>
+                    </div><!-- /fb-visual-editor -->
+
+                    <!-- JSON Editor for Feedback -->
+                    <div id="fb-json-editor" class="json-editor-container">
+                        <div class="card">
+                            <h3>📋 JSON Editor</h3>
+                            <p class="card-desc">Edit the raw feedback embed JSON directly</p>
+                            <div class="json-toolbar">
+                                <button class="json-btn" onclick="formatJson('fb')">⚡ Format</button>
+                                <button class="json-btn" onclick="copyJson('fb')">📋 Copy</button>
+                                <button class="json-btn" onclick="pasteJson('fb')">📥 Paste</button>
+                                <span id="fb-json-status" class="json-status valid">✓ Valid</span>
+                            </div>
+                            <div class="json-editor-wrap">
+                                <textarea id="fb-json-textarea"></textarea>
+                            </div>
+                            <div id="fb-json-error" class="json-error-detail"></div>
+                        </div>
+                        <div class="card" style="margin-top:16px">
+                            <h3>🔗 Logging Setup</h3>
+                            <div class="form-group">
+                                <label for="fb_json_log_channel">Log Channel ID</label>
+                                <input type="text" id="fb_json_log_channel" placeholder="Where to send user responses">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb_json_admin_id">Admin User ID</label>
+                                <input type="text" id="fb_json_admin_id" placeholder="Who to ping when they respond">
+                            </div>
+                        </div>
+                        <div class="embed-actions" style="margin-top:16px">
+                            <button onclick="launchFeedbackFromJson()" class="btn-primary btn-full">🎁 Launch Feedback
+                                from JSON</button>
+                            <button onclick="stopFeedback()" class="btn-danger btn-full" style="margin-top:8px">🛑
+                                Stop</button>
+                            <button onclick="resetFbClaims()" class="btn-secondary btn-full" style="margin-top:8px">🔄
+                                Reset Claims</button>
+                            <button onclick="clearJsonEditor('fb')" class="btn-danger btn-full"
+                                style="margin-top:8px">🧹 Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Preview Side -->
+                <div class="embed-preview-wrapper">
+                    <h3 class="preview-title">Live DM Preview</h3>
+                    <div class="discord-embed-preview">
+                        <div class="preview-bot-msg">
+                            <div class="preview-bot-header">
+                                <span class="preview-bot-avatar">🤖</span>
+                                <span class="preview-bot-name">Your Bot <span class="preview-bot-tag">BOT</span></span>
+                            </div>
+                            <div class="preview-message-text" id="fb-preview-message" style="display:none"></div>
+                        </div>
+                        <div class="embed-preview-card" id="fb-preview">
+                            <div class="embed-color-bar" id="fb-preview-color-bar" style="background:#FFD700"></div>
+                            <div class="embed-content">
+                                <div class="embed-body">
+                                    <div class="embed-author" id="fb-preview-author" style="display:none">
+                                        <img class="embed-author-icon" id="fb-preview-author-icon" src=""
+                                            style="display:none">
+                                        <span id="fb-preview-author-name"></span>
+                                    </div>
+                                    <div class="embed-title-text" id="fb-preview-title">🎁 Your Gift Title</div>
+                                    <div class="embed-desc" id="fb-preview-desc" style="display:none"></div>
+                                    <div class="embed-fields" id="fb-preview-fields"></div>
+                                    <div class="embed-img-wrapper" id="fb-preview-image-wrapper" style="display:none">
+                                        <img class="embed-img" id="fb-preview-image" src="">
+                                    </div>
+                                </div>
+                                <div class="embed-thumb" id="fb-preview-thumb-wrapper" style="display:none">
+                                    <img id="fb-preview-thumb" src="" onerror="this.parentElement.style.display='none'">
+                                </div>
+                            </div>
+                            <div class="embed-footer-section" id="fb-preview-footer" style="display:none">
+                                <img class="embed-footer-icon" id="fb-preview-footer-icon" src="" style="display:none">
+                                <span id="fb-preview-footer-text"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Claims Log Panel ────────────────────────────── -->
+        <section id="panel-claims" class="panel">
+            <div class="panel-header">
+                <h1>📜 Giveaway History</h1>
+                <p>View past and active giveaways and see exactly who claimed them</p>
+            </div>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button id="tab-giveaway" onclick="switchClaimTab('giveaway')" class="btn-primary">Giveaways</button>
+                <button id="tab-feedback" onclick="switchClaimTab('feedback')" class="btn-secondary">Response
+                    Giveaways</button>
+            </div>
+            <div class="card full-width">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 id="claims-view-title">All Events</h3>
+                    <div>
+                        <button id="btn-back-events" onclick="showEventsList()" class="btn-secondary btn-sm"
+                            style="display:none; margin-right:8px;">⬅ Back to Events</button>
+                        <button onclick="refreshClaimsList()" class="btn-secondary btn-sm">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Events List View -->
+                <div id="view-events-list" class="table-container" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
+                                <th style="padding: 12px; color: var(--text-muted);">Status</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Event Title</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Created At</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Total Claims</th>
+                                <th style="padding: 12px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="events-table-body">
+                            <tr>
+                                <td colspan="5" style="padding: 12px; text-align: center; color: var(--text-muted);">
+                                    Loading events...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Specific Event Claims View -->
+                <div id="view-event-claims" class="table-container" style="display:none; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
+                                <th style="padding: 12px; color: var(--text-muted); width: 60px;">Avatar</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Username</th>
+                                <th style="padding: 12px; color: var(--text-muted);">User ID</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Claimed At</th>
+                                <th id="th-response" style="padding: 12px; color: var(--text-muted); display: none;">
+                                    Response</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claims-table-body">
+                            <!-- JS fills this -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Commands Panel ────────────────────────────────── -->
+        <section id="panel-commands" class="panel">
+            <div class="panel-header">
+                <h1>🎮 Commands Manager</h1>
+                <p>View all built-in commands and create your own custom commands</p>
+            </div>
+
+            <!-- Built-in Commands -->
+            <div class="card full-width" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3>📋 Built-in Commands</h3>
+                    <span class="claim-badge" id="builtin-count">0</span>
+                </div>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 12px; color: var(--text-muted);">Command</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Description</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Module</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Access</th>
+                            </tr>
+                        </thead>
+                        <tbody id="builtin-commands-body">
+                            <tr>
+                                <td colspan="4" style="padding: 12px; text-align: center; color: #888;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Custom Commands -->
+            <div class="card full-width" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3>⚡ Custom Commands</h3>
+                    <span class="claim-badge" id="custom-count">0</span>
+                </div>
+                <div class="table-container" style="overflow-x: auto; margin-bottom: 16px;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 12px; color: var(--text-muted);">Command</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Type</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Access</th>
+                                <th style="padding: 12px; color: var(--text-muted);">Response / Title</th>
+                                <th style="padding: 12px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="custom-commands-body">
+                            <tr>
+                                <td colspan="5" style="padding: 12px; text-align: center; color: #888;">No custom
+                                    commands yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Create / Edit Custom Command -->
+            <div class="card full-width">
+                <h3 id="cmd-editor-title">➕ Create Custom Command</h3>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label for="cmd_name">Command Name <span class="optional">(no prefix, just the word e.g. mute,
+                            rules)</span></label>
+                    <input type="text" id="cmd_name" placeholder="e.g. mute, ban, rules, info">
+                </div>
+
+                <!-- Action Selection -->
+                <div class="form-group">
+                    <label for="cmd_action">⚡ Action <span class="optional">(what happens when this command is
+                            used)</span></label>
+                    <select id="cmd_action" onchange="onCmdActionChange()"
+                        style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); padding: 10px 14px; border-radius: 8px; width: 100%; font-size: 0.95em;">
+                        <option value="none">💬 No Action (reply only)</option>
+                        <option value="mute">🔇 Mute / Timeout User</option>
+                        <option value="unmute">🔊 Unmute User</option>
+                        <option value="kick">👢 Kick User</option>
+                        <option value="ban">🔨 Ban User</option>
+                        <option value="addrole">➕ Add Role to User</option>
+                        <option value="removerole">➖ Remove Role from User</option>
+                        <option value="purge">🧹 Purge Messages</option>
+                    </select>
+                </div>
+
+                <!-- Action-specific fields -->
+                <div id="cmd-action-fields" style="display: none;">
+                    <div id="cmd-action-duration" style="display: none;" class="form-group">
+                        <label for="cmd_action_duration">Timeout Duration <span class="optional">(minutes, default:
+                                10)</span></label>
+                        <input type="number" id="cmd_action_duration" placeholder="10" value="10" min="1" max="40320">
+                    </div>
+                    <div id="cmd-action-reason" style="display: none;" class="form-group">
+                        <label for="cmd_action_reason">Reason <span class="optional">(shown in audit log)</span></label>
+                        <input type="text" id="cmd_action_reason" placeholder="e.g. Breaking server rules">
+                    </div>
+                    <div id="cmd-action-role" style="display: none;" class="form-group">
+                        <label for="cmd_action_role_id">Role ID <span class="optional">(right-click role → Copy
+                                ID)</span></label>
+                        <input type="text" id="cmd_action_role_id" placeholder="e.g. 123456789012345678">
+                    </div>
+                    <div class="form-group"
+                        style="padding: 10px; background: rgba(88,101,242,0.1); border-radius: 8px; margin-top: 4px;">
+                        <span style="color: #a5b0ff; font-size: 0.9em;" id="cmd-action-hint">
+                            Usage: <code>!command @user</code>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Response Type -->
+                <div class="form-group">
+                    <label>Response Type <span class="optional">(reply sent after action executes)</span></label>
+                    <div style="display: flex; gap: 10px; margin-top: 4px;">
+                        <button type="button" id="cmd-type-none" class="btn-secondary btn-sm"
+                            onclick="setCmdType('none')">🚫 Default</button>
+                        <button type="button" id="cmd-type-text" class="btn-secondary btn-sm"
+                            onclick="setCmdType('text')">💬 Text</button>
+                        <button type="button" id="cmd-type-embed" class="btn-primary btn-sm"
+                            onclick="setCmdType('embed')">📝 Embed</button>
+                    </div>
+                </div>
+
+                <!-- Text response fields -->
+                <div id="cmd-text-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="cmd_response">Response Message</label>
+                        <textarea id="cmd_response" rows="4"
+                            placeholder="Type your response here...&#10;Variables: {user} {username} {server} {target} {targetname}"></textarea>
+                    </div>
+                </div>
+
+                <!-- Embed response fields -->
+                <div id="cmd-embed-fields">
+                    <div class="form-group">
+                        <label for="cmd_embed_title">Embed Title</label>
+                        <input type="text" id="cmd_embed_title" placeholder="e.g. {target} has been muted">
+                    </div>
+                    <div class="form-group">
+                        <label for="cmd_embed_description">Embed Description</label>
+                        <textarea id="cmd_embed_description" rows="4"
+                            placeholder="Variables: {user} {username} {server} {target} {targetname}"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="cmd_embed_color">Embed Color</label>
+                        <div class="color-picker-row">
+                            <input type="color" id="cmd_embed_color" value="#5865F2">
+                            <span class="color-hex" id="cmd-color-label">#5865F2</span>
+                            <div class="color-presets">
+                                <button type="button" class="color-dot" style="background:#5865F2"
+                                    onclick="setCmdColor('#5865F2')"></button>
+                                <button type="button" class="color-dot" style="background:#57F287"
+                                    onclick="setCmdColor('#57F287')"></button>
+                                <button type="button" class="color-dot" style="background:#FFD700"
+                                    onclick="setCmdColor('#FFD700')"></button>
+                                <button type="button" class="color-dot" style="background:#ED4245"
+                                    onclick="setCmdColor('#ED4245')"></button>
+                                <button type="button" class="color-dot" style="background:#EB459E"
+                                    onclick="setCmdColor('#EB459E')"></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="cmd_embed_image">Image URL</label>
+                            <input type="text" id="cmd_embed_image" placeholder="https://...">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="cmd_embed_thumbnail">Thumbnail URL</label>
+                            <input type="text" id="cmd_embed_thumbnail" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="cmd_embed_footer_text">Footer Text</label>
+                            <input type="text" id="cmd_embed_footer_text" placeholder="Footer text">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="cmd_embed_footer_icon">Footer Icon URL</label>
+                            <input type="text" id="cmd_embed_footer_icon" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="inline-check">
+                        <input type="checkbox" id="cmd_admin_only" checked> Admin Only
+                    </label>
+                </div>
+
+                <div class="embed-actions" style="margin-top: 12px;">
+                    <button onclick="saveCustomCmd()" class="btn-primary btn-full">💾 Save Command</button>
+                    <button onclick="clearCmdEditor()" class="btn-secondary btn-full" style="margin-top: 8px;">🧹
+                        Clear</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ─── Image Proxy Helper ──────────────────────────────────
+        function proxyUrl(url) {
+            if (!url) return '';
+            return '/api/proxy-image?url=' + encodeURIComponent(url);
+        }
+        // ─── Panel Navigation ─────────────────────────────────
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                item.classList.add('active');
+                document.getElementById('panel-' + item.dataset.panel).classList.add('active');
+            });
+        });
+
+        // ─── Live Previews (Settings) ─────────────────────────
+        document.getElementById('prefix').addEventListener('input', (e) => {
+            document.getElementById('prefix-preview').textContent = e.target.value || '!';
+            document.getElementById('prefix-example').textContent = e.target.value || '!';
+        });
+        document.getElementById('nickname_prefix').addEventListener('input', (e) => {
+            document.getElementById('nick-preview').textContent = (e.target.value || 'AC') + ' anshu';
+        });
+
+        // ─── Toast Notification ───────────────────────────────
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // ─── Save Settings ────────────────────────────────────
+        async function saveSettings() {
+            const data = {
+                prefix: document.getElementById('prefix').value,
+                nickname_prefix: document.getElementById('nickname_prefix').value,
+                welcome_channel_id: document.getElementById('welcome_channel_id').value,
+                welcome_message: document.getElementById('welcome_message').value,
+            };
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await res.json();
+                if (result.success) showToast('✅ Settings saved successfully!');
+                else showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Giveaway ────────────────────────────────────────
+        let giftFields = [];
+
+        function setGiftColor(hex) {
+            document.getElementById('gift_color').value = hex;
+            document.getElementById('gift-color-label').textContent = hex;
+            updateGiftPreview();
+        }
+
+        function addGiftField() {
+            const id = Date.now();
+            giftFields.push({ id, name: '', value: '', inline: false });
+            renderGiftFields();
+            updateGiftPreview();
+        }
+
+        function removeGiftField(id) {
+            giftFields = giftFields.filter(f => f.id !== id);
+            renderGiftFields();
+            updateGiftPreview();
+        }
+
+        function updateGiftFieldData(id, key, value) {
+            const field = giftFields.find(f => f.id === id);
+            if (field) field[key] = value;
+            updateGiftPreview();
+        }
+
+        function renderGiftFields() {
+            const container = document.getElementById('gift-fields-container');
+            container.innerHTML = giftFields.map((f, i) => `
+                <div class="field-row" data-id="${f.id}">
+                    <div class="field-header">
+                        <span class="field-label">Field ${i + 1}</span>
+                        <button class="field-remove" onclick="removeGiftField(${f.id})">✕</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <input type="text" placeholder="Field name" value="${f.name}"
+                                oninput="updateGiftFieldData(${f.id}, 'name', this.value)">
+                        </div>
+                        <div class="form-group flex-1">
+                            <input type="text" placeholder="Field value" value="${f.value}"
+                                oninput="updateGiftFieldData(${f.id}, 'value', this.value)">
+                        </div>
+                    </div>
+                    <label class="inline-check">
+                        <input type="checkbox" ${f.inline ? 'checked' : ''}
+                            onchange="updateGiftFieldData(${f.id}, 'inline', this.checked)">
+                        Inline
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        // ─── Giveaway Live Preview ─────────────────────────────
+        function updateGiftPreview() {
+            const color = document.getElementById('gift_color').value;
+            document.getElementById('gift-color-label').textContent = color.toUpperCase();
+            document.getElementById('gift-preview-color-bar').style.backgroundColor = color;
+
+            // Message text (above embed)
+            const message = document.getElementById('gift_message').value;
+            const messageEl = document.getElementById('gift-preview-message');
+            if (message) { messageEl.textContent = message; messageEl.style.display = 'block'; }
+            else messageEl.style.display = 'none';
+
+            // Title
+            const title = document.getElementById('gift_title').value;
+            const titleEl = document.getElementById('gift-preview-title');
+            titleEl.textContent = title ? '🎁 ' + title : '🎁 Your Gift Title';
+            titleEl.style.display = 'block';
+
+            // Description
+            const desc = document.getElementById('gift_description').value;
+            const descEl = document.getElementById('gift-preview-desc');
+            if (desc) { descEl.textContent = desc; descEl.style.display = 'block'; }
+            else descEl.style.display = 'none';
+
+            // Author
+            const authorName = document.getElementById('gift_author_name').value;
+            const authorIcon = document.getElementById('gift_author_icon').value;
+            const authorEl = document.getElementById('gift-preview-author');
+            const authorIconEl = document.getElementById('gift-preview-author-icon');
+            if (authorName) {
+                authorEl.style.display = 'flex';
+                document.getElementById('gift-preview-author-name').textContent = authorName;
+                if (authorIcon) { authorIconEl.src = proxyUrl(authorIcon); authorIconEl.style.display = 'block'; }
+                else authorIconEl.style.display = 'none';
+            } else authorEl.style.display = 'none';
+
+            // Thumbnail
+            const thumb = document.getElementById('gift_thumbnail').value;
+            const thumbWrapper = document.getElementById('gift-preview-thumb-wrapper');
+            const thumbImg = document.getElementById('gift-preview-thumb');
+            if (thumb) {
+                thumbImg.src = proxyUrl(thumb);
+                thumbWrapper.style.display = 'block';
+            } else {
+                thumbWrapper.style.display = 'none';
+            }
+
+            // Image
+            const img = document.getElementById('gift_image').value;
+            const imgWrapper = document.getElementById('gift-preview-image-wrapper');
+            const imgEl = document.getElementById('gift-preview-image');
+            if (img) {
+                imgEl.src = proxyUrl(img);
+                imgWrapper.style.display = 'block';
+            } else {
+                imgWrapper.style.display = 'none';
+            }
+
+            // Footer
+            const footerText = document.getElementById('gift_footer_text').value;
+            const footerIcon = document.getElementById('gift_footer_icon').value;
+            const footerEl = document.getElementById('gift-preview-footer');
+            const footerIconEl = document.getElementById('gift-preview-footer-icon');
+            if (footerText) {
+                footerEl.style.display = 'flex';
+                document.getElementById('gift-preview-footer-text').textContent = footerText;
+                if (footerIcon) { footerIconEl.src = proxyUrl(footerIcon); footerIconEl.style.display = 'block'; }
+                else footerIconEl.style.display = 'none';
+            } else footerEl.style.display = 'none';
+
+            // Fields (custom + gift link)
+            const fieldsEl = document.getElementById('gift-preview-fields');
+            let fieldsHtml = giftFields
+                .filter(f => f.name || f.value)
+                .map(f => `
+                    <div class="embed-field ${f.inline ? 'inline' : ''}">
+                        <div class="embed-field-name">${f.name || '—'}</div>
+                        <div class="embed-field-value">${f.value || '—'}</div>
+                    </div>
+                `).join('');
+
+            // Add gift link as a field in preview
+            const giftLink = document.getElementById('gift_link').value;
+            if (giftLink) {
+                fieldsHtml += `
+                    <div class="embed-field">
+                        <div class="embed-field-name">🔗 Your Gift</div>
+                        <div class="embed-field-value">${giftLink}</div>
+                    </div>
+                `;
+            }
+            fieldsEl.innerHTML = fieldsHtml;
+        }
+
+        async function createGiveaway() {
+            const data = {
+                title: document.getElementById('gift_title').value,
+                description: document.getElementById('gift_description').value,
+                gift_link: document.getElementById('gift_link').value,
+                message_text: document.getElementById('gift_message').value,
+                color: document.getElementById('gift_color').value,
+                author_name: document.getElementById('gift_author_name').value,
+                author_icon: document.getElementById('gift_author_icon').value,
+                thumbnail: document.getElementById('gift_thumbnail').value,
+                image: document.getElementById('gift_image').value,
+                footer_text: document.getElementById('gift_footer_text').value,
+                footer_icon: document.getElementById('gift_footer_icon').value,
+                fields: giftFields.filter(f => f.name && f.value),
+            };
+            if (!data.title) { showToast('❌ Please enter a gift title', 'error'); return; }
+            try {
+                const res = await fetch('/api/giveaway', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🎁 Giveaway launched! Users type !free to get this custom DM');
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        async function stopGiveaway() {
+            if (!(await showConfirmModal('Are you sure you want to stop the active giveaway?', 'Stop Giveaway'))) return;
+            try {
+                const res = await fetch('/api/giveaway/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🛑 Giveaway stopped! Claims total: ' + result.claims_count);
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        function clearGiveawayEmbed() {
+            ['gift_title', 'gift_description', 'gift_link', 'gift_message',
+                'gift_author_name', 'gift_author_icon', 'gift_thumbnail', 'gift_image',
+                'gift_footer_text', 'gift_footer_icon'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('gift_color').value = '#FFD700';
+            document.getElementById('gift-color-label').textContent = '#FFD700';
+            giftFields = [];
+            renderGiftFields();
+            updateGiftPreview();
+            showToast('🧹 Giveaway embed cleared');
+        }
+
+        async function resetClaims() {
+            if (!(await showConfirmModal('Reset all claims? Everyone will be able to claim again.', 'Reset Claims'))) return;
+            try {
+                const res = await fetch('/api/giveaway/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🔄 Claims reset! Users can claim again.');
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+
+        // ─── Feedback System ────────────────────────────────────────
+        let fbFields = [];
+
+        function setFbColor(hex) {
+            document.getElementById('fb_color').value = hex;
+            document.getElementById('fb-color-label').textContent = hex;
+            updateFbPreview();
+        }
+
+        function addFbField() {
+            const id = Date.now();
+            fbFields.push({ id, name: '', value: '', inline: false });
+            renderFbFields();
+            updateFbPreview();
+        }
+
+        function removeFbField(id) {
+            fbFields = fbFields.filter(f => f.id !== id);
+            renderFbFields();
+            updateFbPreview();
+        }
+
+        function updateFbFieldData(id, key, value) {
+            const field = fbFields.find(f => f.id === id);
+            if (field) field[key] = value;
+            updateFbPreview();
+        }
+
+        function renderFbFields() {
+            const container = document.getElementById('fb-fields-container');
+            container.innerHTML = fbFields.map((f, i) => `
+                <div class="field-row" data-id="${f.id}">
+                    <div class="field-header">
+                        <span class="field-label">Field ${i + 1}</span>
+                        <button class="field-remove" onclick="removeFbField(${f.id})">✕</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <input type="text" placeholder="Field name" value="${f.name}"
+                                oninput="updateFbFieldData(${f.id}, 'name', this.value)">
+                        </div>
+                        <div class="form-group flex-1">
+                            <input type="text" placeholder="Field value" value="${f.value}"
+                                oninput="updateFbFieldData(${f.id}, 'value', this.value)">
+                        </div>
+                    </div>
+                    <label class="inline-check">
+                        <input type="checkbox" ${f.inline ? 'checked' : ''}
+                            onchange="updateFbFieldData(${f.id}, 'inline', this.checked)">
+                        Inline
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        // ─── Feedback System Live Preview ─────────────────────────────
+        function updateFbPreview() {
+            const color = document.getElementById('fb_color').value;
+            document.getElementById('fb-color-label').textContent = color.toUpperCase();
+            document.getElementById('fb-preview-color-bar').style.backgroundColor = color;
+
+            // Message text (above embed)
+            const message = document.getElementById('fb_message').value;
+            const messageEl = document.getElementById('fb-preview-message');
+            if (message) { messageEl.textContent = message; messageEl.style.display = 'block'; }
+            else messageEl.style.display = 'none';
+
+            // Title
+            const title = document.getElementById('fb_title').value;
+            const titleEl = document.getElementById('fb-preview-title');
+            titleEl.textContent = title ? '🎁 ' + title : '🎁 Your Gift Title';
+            titleEl.style.display = 'block';
+
+            // Description
+            const desc = document.getElementById('fb_description').value;
+            const descEl = document.getElementById('fb-preview-desc');
+            if (desc) { descEl.textContent = desc; descEl.style.display = 'block'; }
+            else descEl.style.display = 'none';
+
+            // Author
+            const authorName = document.getElementById('fb_author_name').value;
+            const authorIcon = document.getElementById('fb_author_icon').value;
+            const authorEl = document.getElementById('fb-preview-author');
+            const authorIconEl = document.getElementById('fb-preview-author-icon');
+            if (authorName) {
+                authorEl.style.display = 'flex';
+                document.getElementById('fb-preview-author-name').textContent = authorName;
+                if (authorIcon) { authorIconEl.src = proxyUrl(authorIcon); authorIconEl.style.display = 'block'; }
+                else authorIconEl.style.display = 'none';
+            } else authorEl.style.display = 'none';
+
+            // Thumbnail
+            const thumb = document.getElementById('fb_thumbnail').value;
+            const thumbWrapper = document.getElementById('fb-preview-thumb-wrapper');
+            const thumbImg = document.getElementById('fb-preview-thumb');
+            if (thumb) {
+                thumbImg.src = proxyUrl(thumb);
+                thumbWrapper.style.display = 'block';
+            } else {
+                thumbWrapper.style.display = 'none';
+            }
+
+            // Image
+            const img = document.getElementById('fb_image').value;
+            const imgWrapper = document.getElementById('fb-preview-image-wrapper');
+            const imgEl = document.getElementById('fb-preview-image');
+            if (img) {
+                imgEl.src = proxyUrl(img);
+                imgWrapper.style.display = 'block';
+            } else {
+                imgWrapper.style.display = 'none';
+            }
+
+            // Footer
+            const footerText = document.getElementById('fb_footer_text').value;
+            const footerIcon = document.getElementById('fb_footer_icon').value;
+            const footerEl = document.getElementById('fb-preview-footer');
+            const footerIconEl = document.getElementById('fb-preview-footer-icon');
+            if (footerText) {
+                footerEl.style.display = 'flex';
+                document.getElementById('fb-preview-footer-text').textContent = footerText;
+                if (footerIcon) { footerIconEl.src = proxyUrl(footerIcon); footerIconEl.style.display = 'block'; }
+                else footerIconEl.style.display = 'none';
+            } else footerEl.style.display = 'none';
+
+            // Fields (custom + gift link)
+            const fieldsEl = document.getElementById('fb-preview-fields');
+            let fieldsHtml = fbFields
+                .filter(f => f.name || f.value)
+                .map(f => `
+                    <div class="embed-field ${f.inline ? 'inline' : ''}">
+                        <div class="embed-field-name">${f.name || '—'}</div>
+                        <div class="embed-field-value">${f.value || '—'}</div>
+                    </div>
+                `).join('');
+
+            // Add gift link as a field in preview
+            const giftLink = document.getElementById('fb_link').value;
+            if (giftLink) {
+                fieldsHtml += `
+                    <div class="embed-field">
+                        <div class="embed-field-name">🔗 Your Gift</div>
+                        <div class="embed-field-value">${giftLink}</div>
+                    </div>
+                `;
+            }
+            fieldsEl.innerHTML = fieldsHtml;
+        }
+
+        async function createFeedback() {
+            const data = {
+                title: document.getElementById('fb_title').value,
+                description: document.getElementById('fb_description').value,
+                fb_link: document.getElementById('fb_link').value,
+                message_text: document.getElementById('fb_message').value,
+                color: document.getElementById('fb_color').value,
+                author_name: document.getElementById('fb_author_name').value,
+                author_icon: document.getElementById('fb_author_icon').value,
+                thumbnail: document.getElementById('fb_thumbnail').value,
+                image: document.getElementById('fb_image').value,
+                footer_text: document.getElementById('fb_footer_text').value,
+                footer_icon: document.getElementById('fb_footer_icon').value,
+                fields: fbFields.filter(f => f.name && f.value),
+                log_channel_id: document.getElementById('fb_log_channel').value,
+                admin_id: document.getElementById('fb_admin_id').value,
+                response_prompt: document.getElementById('fb_response_prompt').value,
+            };
+            if (!data.title) { showToast('❌ Please enter a gift title', 'error'); return; }
+            try {
+                const res = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🎁 Feedback System launched! Users type !free to get this custom DM');
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        async function stopFeedback() {
+            if (!(await showConfirmModal('Are you sure you want to stop the active feedback system?', 'Stop Feedback System'))) return;
+            try {
+                const res = await fetch('/api/feedback/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🛑 Feedback System stopped! Claims total: ' + result.claims_count);
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        function clearFeedbackEmbed() {
+            ['fb_title', 'fb_description', 'fb_link', 'fb_message',
+                'fb_author_name', 'fb_author_icon', 'fb_thumbnail', 'fb_image',
+                'fb_footer_text', 'fb_footer_icon'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('fb_color').value = '#FFD700';
+            document.getElementById('fb-color-label').textContent = '#FFD700';
+            fbFields = [];
+            renderFbFields();
+            updateFbPreview();
+            showToast('🧹 Feedback System embed cleared');
+        }
+
+        async function resetFbClaims() {
+            if (!(await showConfirmModal('Reset all claims? Everyone will be able to claim again.', 'Reset Claims'))) return;
+            try {
+                const res = await fetch('/api/feedback/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🔄 Claims reset! Users can claim again.');
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  EMBED BUILDER
+        // ═══════════════════════════════════════════════════════
+
+        let embedFields = [];
+
+        function setColor(hex) {
+            document.getElementById('embed_color').value = hex;
+            document.getElementById('color-hex-label').textContent = hex;
+            updatePreview();
+        }
+
+        function addField() {
+            const id = Date.now();
+            embedFields.push({ id, name: '', value: '', inline: false });
+            renderFields();
+        }
+
+        function removeField(id) {
+            embedFields = embedFields.filter(f => f.id !== id);
+            renderFields();
+            updatePreview();
+        }
+
+        function renderFields() {
+            const container = document.getElementById('fields-container');
+            container.innerHTML = embedFields.map((f, i) => `
+                <div class="field-row" data-id="${f.id}">
+                    <div class="field-header">
+                        <span class="field-label">Field ${i + 1}</span>
+                        <button class="field-remove" onclick="removeField(${f.id})">✕</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <input type="text" placeholder="Field name" value="${f.name}"
+                                oninput="updateFieldData(${f.id}, 'name', this.value)">
+                        </div>
+                        <div class="form-group flex-1">
+                            <input type="text" placeholder="Field value" value="${f.value}"
+                                oninput="updateFieldData(${f.id}, 'value', this.value)">
+                        </div>
+                    </div>
+                    <label class="inline-check">
+                        <input type="checkbox" ${f.inline ? 'checked' : ''}
+                            onchange="updateFieldData(${f.id}, 'inline', this.checked)">
+                        Inline
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        function updateFieldData(id, key, value) {
+            const field = embedFields.find(f => f.id === id);
+            if (field) field[key] = value;
+            updatePreview();
+        }
+
+        // ─── Live Preview ─────────────────────────────────────
+        function updatePreview() {
+            const color = document.getElementById('embed_color').value;
+            document.getElementById('color-hex-label').textContent = color.toUpperCase();
+            document.getElementById('preview-color-bar').style.backgroundColor = color;
+
+            // Message Content
+            const msg = document.getElementById('embed_message_content').value;
+            const msgEl = document.getElementById('preview-message');
+            if (msg) { msgEl.textContent = msg; msgEl.style.display = 'block'; }
+            else msgEl.style.display = 'none';
+
+            // Author
+            const authorName = document.getElementById('embed_author_name').value;
+            const authorIcon = document.getElementById('embed_author_icon').value;
+            const authorEl = document.getElementById('preview-author');
+            const authorIconEl = document.getElementById('preview-author-icon');
+            const authorNameEl = document.getElementById('preview-author-name');
+            if (authorName) {
+                authorEl.style.display = 'flex';
+                authorNameEl.textContent = authorName;
+                if (authorIcon) { authorIconEl.src = proxyUrl(authorIcon); authorIconEl.style.display = 'block'; }
+                else authorIconEl.style.display = 'none';
+            } else authorEl.style.display = 'none';
+
+            // Title
+            const title = document.getElementById('embed_title').value;
+            const titleEl = document.getElementById('preview-title');
+            if (title) { titleEl.textContent = title; titleEl.style.display = 'block'; }
+            else titleEl.style.display = 'none';
+
+            // Description
+            const desc = document.getElementById('embed_description').value;
+            const descEl = document.getElementById('preview-desc');
+            if (desc) { descEl.textContent = desc; descEl.style.display = 'block'; }
+            else descEl.style.display = 'none';
+
+            // Thumbnail
+            const thumb = document.getElementById('embed_thumbnail').value;
+            const thumbWrapper = document.getElementById('preview-thumb-wrapper');
+            const thumbEl = document.getElementById('preview-thumb');
+            if (thumb) { thumbEl.src = proxyUrl(thumb); thumbWrapper.style.display = 'block'; }
+            else thumbWrapper.style.display = 'none';
+
+            // Image
+            const img = document.getElementById('embed_image').value;
+            const imgWrapper = document.getElementById('preview-image-wrapper');
+            const imgEl = document.getElementById('preview-image');
+            if (img) { imgEl.src = proxyUrl(img); imgWrapper.style.display = 'block'; }
+            else imgWrapper.style.display = 'none';
+
+            // Footer
+            const footerText = document.getElementById('embed_footer_text').value;
+            const footerIcon = document.getElementById('embed_footer_icon').value;
+            const footerEl = document.getElementById('preview-footer');
+            const footerIconEl = document.getElementById('preview-footer-icon');
+            const footerTextEl = document.getElementById('preview-footer-text');
+            if (footerText) {
+                footerEl.style.display = 'flex';
+                footerTextEl.textContent = footerText;
+                if (footerIcon) { footerIconEl.src = proxyUrl(footerIcon); footerIconEl.style.display = 'block'; }
+                else footerIconEl.style.display = 'none';
+            } else footerEl.style.display = 'none';
+
+            // Fields
+            const fieldsEl = document.getElementById('preview-fields');
+            fieldsEl.innerHTML = embedFields
+                .filter(f => f.name || f.value)
+                .map(f => `
+                    <div class="embed-field ${f.inline ? 'inline' : ''}">
+                        <div class="embed-field-name">${f.name || '—'}</div>
+                        <div class="embed-field-value">${f.value || '—'}</div>
+                    </div>
+                `).join('');
+        }
+
+        // ─── Send Embed ───────────────────────────────────────
+        async function sendEmbed() {
+            const channelId = document.getElementById('embed_channel_id').value.trim();
+            if (!channelId) { showToast('❌ Please enter a Channel ID', 'error'); return; }
+
+            const data = {
+                channel_id: channelId,
+                message_content: document.getElementById('embed_message_content').value,
+                title: document.getElementById('embed_title').value,
+                description: document.getElementById('embed_description').value,
+                color: document.getElementById('embed_color').value,
+                author_name: document.getElementById('embed_author_name').value,
+                author_icon: document.getElementById('embed_author_icon').value,
+                thumbnail: document.getElementById('embed_thumbnail').value,
+                image: document.getElementById('embed_image').value,
+                footer_text: document.getElementById('embed_footer_text').value,
+                footer_icon: document.getElementById('embed_footer_icon').value,
+                fields: embedFields.filter(f => f.name && f.value),
+            };
+
+            try {
+                const res = await fetch('/api/embed/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await res.json();
+                if (result.success) showToast('✅ Embed sent to channel!');
+                else showToast('❌ ' + (result.error || 'Failed to send'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Clear Embed ──────────────────────────────────────
+        function clearEmbed() {
+            ['embed_author_name', 'embed_author_icon', 'embed_title', 'embed_description',
+                'embed_thumbnail', 'embed_image', 'embed_footer_text', 'embed_footer_icon',
+                'embed_message_content'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('embed_color').value = '#5865F2';
+            document.getElementById('color-hex-label').textContent = '#5865F2';
+            embedFields = [];
+            renderFields();
+            updatePreview();
+            showToast('🧹 Embed cleared');
+        }
+
+        // ─── Auto-update Claim Count and List ──────────────────
+        let currentViewingEventId = null;
+        let lastHistoryData = {};
+        let activeEventId = null;
+        let currentClaimsTab = 'giveaway'; // 'giveaway' or 'feedback'
+
+        function switchClaimTab(tab) {
+            currentClaimsTab = tab;
+            document.getElementById('tab-giveaway').className = tab === 'giveaway' ? 'btn-primary' : 'btn-secondary';
+            document.getElementById('tab-feedback').className = tab === 'feedback' ? 'btn-primary' : 'btn-secondary';
+
+            if (tab === 'feedback') {
+                document.getElementById('th-response').style.display = 'table-cell';
+            } else {
+                document.getElementById('th-response').style.display = 'none';
+            }
+
+            showEventsList();
+            refreshClaimsList();
+        }
+
+        function showEventsList() {
+            currentViewingEventId = null;
+            document.getElementById('view-events-list').style.display = 'block';
+            document.getElementById('view-event-claims').style.display = 'none';
+            document.getElementById('btn-back-events').style.display = 'none';
+            document.getElementById('claims-view-title').textContent = currentClaimsTab === 'giveaway' ? 'Giveaway Events' : 'Response Giveaways';
+            renderEventsTable();
+        }
+
+        function showEventClaims(eventId) {
+            currentViewingEventId = eventId;
+            document.getElementById('view-events-list').style.display = 'none';
+            document.getElementById('view-event-claims').style.display = 'block';
+            document.getElementById('btn-back-events').style.display = 'inline-block';
+
+            const event = lastHistoryData[eventId];
+            if (event) {
+                const title = event.title || 'Legacy Gift';
+                let count = Object.keys(event.claims || {}).length;
+                if (event.past_resets) {
+                    event.past_resets.forEach(r => { count += Object.keys(r.claims || {}).length; });
+                }
+                document.getElementById('claims-view-title').innerHTML = `Claims for <strong>${title}</strong> <span class="claim-badge">${count} claimed</span>`;
+                renderClaimsTable(event);
+            }
+        }
+
+        function renderEventsTable() {
+            const tbody = document.getElementById('events-table-body');
+            if (!tbody) return;
+            const entries = Object.entries(lastHistoryData).sort((a, b) => {
+                return new Date(b[1].created_at || 0) - new Date(a[1].created_at || 0);
+            });
+
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding: 12px; text-align: center; color: #888;">No events found.</td></tr>';
+                return;
+            }
+
+            let rows = '';
+            for (const [id, data] of entries) {
+                let count = Object.keys(data.claims || {}).length;
+                if (data.past_resets) {
+                    data.past_resets.forEach(r => { count += Object.keys(r.claims || {}).length; });
+                }
+                const d = new Date(data.created_at);
+                const dateStr = isNaN(d) ? 'Unknown Date' : d.toLocaleString();
+                const isActive = (id === activeEventId);
+                const statusBadge = isActive ? '<span style="color:#57F287; font-weight:bold;">🟢 Active</span>' : '<span style="color:#888;">⚪ Ended</span>';
+
+                rows += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="showEventClaims('${id}')" class="event-row-hover">
+                        <td style="padding: 12px;">${statusBadge}</td>
+                        <td style="padding: 12px; color: white;"><strong>${data.title || 'Gift'}</strong></td>
+                        <td style="padding: 12px; color: #aaa; font-size: 0.9em;">${dateStr}</td>
+                        <td style="padding: 12px;"><span class="claim-badge">${count}</span></td>
+                        <td style="padding: 12px; text-align:right;"><button class="btn-secondary btn-sm">View Claims</button></td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = rows;
+        }
+
+        function buildClaimRows(claims) {
+            let rows = '';
+            const colspan = currentClaimsTab === 'feedback' ? 5 : 4;
+
+            for (const [userId, data] of Object.entries(claims)) {
+                const d = new Date(data.claimed_at);
+                const dateStr = isNaN(d) ? 'Unknown Date' : d.toLocaleString();
+                const avatarUrl = data.avatar ? proxyUrl(data.avatar) : 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+                let responseTd = '';
+                if (currentClaimsTab === 'feedback') {
+                    const responseText = data.response ? data.response : '<i style="color:#888">No response yet</i>';
+                    responseTd = `<td style="padding: 12px; color: #e1e1e1;">${responseText}</td>`;
+                }
+
+                rows += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 12px;"><img src="${avatarUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;"></td>
+                        <td style="padding: 12px; color: white;"><strong>${data.username}</strong></td>
+                        <td style="padding: 12px; font-family: monospace; color: #aaa;">${userId}</td>
+                        <td style="padding: 12px; color: #888; font-size: 0.9em;">${dateStr}</td>
+                        ${responseTd}
+                    </tr>
+                `;
+            }
+            return rows;
+        }
+
+        function renderClaimsTable(eventData) {
+            const tbody = document.getElementById('claims-table-body');
+            if (!tbody) return;
+
+            const colspan = currentClaimsTab === 'feedback' ? 5 : 4;
+            let rows = '';
+            const currentClaims = eventData.claims || {};
+
+            // Current Claims
+            if (Object.keys(currentClaims).length > 0) {
+                if (eventData.past_resets && eventData.past_resets.length > 0) {
+                    rows += `<tr><td colspan="${colspan}" style="padding: 8px 12px; background: rgba(88, 101, 242, 0.1); color: var(--text-color); font-weight: bold; border-bottom: 1px solid var(--border-color); font-size: 0.9em;">Current Claims (After Reset)</td></tr>`;
+                }
+                rows += buildClaimRows(currentClaims);
+            }
+
+            // Past Resets
+            if (eventData.past_resets && eventData.past_resets.length > 0) {
+                // Show most recent reset first
+                for (let i = eventData.past_resets.length - 1; i >= 0; i--) {
+                    const resetGroup = eventData.past_resets[i];
+                    if (Object.keys(resetGroup.claims).length > 0) {
+                        const rDate = new Date(resetGroup.reset_at).toLocaleString();
+                        rows += `<tr><td colspan="${colspan}" style="padding: 8px 12px; background: rgba(255, 60, 60, 0.1); color: #ff8888; font-weight: bold; border-top: 2px solid rgba(255,60,60,0.5); border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em;">Archived Claims (Before Reset on ${rDate})</td></tr>`;
+                        rows += buildClaimRows(resetGroup.claims);
+                    }
+                }
+            }
+
+            if (rows === '') {
+                tbody.innerHTML = `<tr><td colspan="${colspan}" style="padding: 12px; text-align: center; color: #888;">No one has claimed this yet.</td></tr>`;
+            } else {
+                tbody.innerHTML = rows;
+            }
+        }
+
+        async function refreshClaimsList() {
+            try {
+                const endpoint = currentClaimsTab === 'giveaway' ? '/api/giveaway' : '/api/feedback';
+                const res = await fetch(endpoint);
+                if (res.ok) {
+                    const result = await res.json();
+
+                    if (result.claims_count !== undefined) {
+                        const badges = document.querySelectorAll('.claim-badge');
+                        badges.forEach(badge => {
+                            // Don't overwrite the drilldown badge
+                            if (badge.closest('#claims-view-title') === null) {
+                                // Find the relevant status div based on current tab
+                                const parentId = currentClaimsTab === 'giveaway' ? 'giveaway-status' : 'feedback-status';
+                                if (badge.closest(`#${parentId}`)) {
+                                    badge.textContent = result.claims_count + ' claimed';
+                                }
+                            }
+                        });
+                    }
+
+                    if (result.history) {
+                        lastHistoryData = result.history;
+                        // Figure out which is active
+                        activeEventId = null;
+                        if (result.giveaway && result.giveaway.active) {
+                            activeEventId = result.giveaway.event_id;
+                        }
+
+                        // Re-render whatever view we are currently on
+                        if (currentViewingEventId) {
+                            showEventClaims(currentViewingEventId);
+                        } else {
+                            renderEventsTable();
+                        }
+                    }
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        setInterval(refreshClaimsList, 5000);
+
+        // Init preview
+        updatePreview();
+        refreshClaimsList();
+
+        // ═══════════════════════════════════════════════════════
+        //  COMMANDS PANEL
+        // ═══════════════════════════════════════════════════════
+
+        let currentCmdType = 'embed';
+        let editingCmdName = null;
+
+        const actionHints = {
+            none: '',
+            mute: 'Usage: <code>!command @user [duration like 10m, 1h, 1d]</code>',
+            unmute: 'Usage: <code>!command @user</code>',
+            kick: 'Usage: <code>!command @user</code>',
+            ban: 'Usage: <code>!command @user</code>',
+            addrole: 'Usage: <code>!command @user</code>',
+            removerole: 'Usage: <code>!command @user</code>',
+            purge: 'Usage: <code>!command [number of messages]</code> (max 100)',
+        };
+
+        function setCmdType(type) {
+            currentCmdType = type;
+            document.getElementById('cmd-type-none').className = type === 'none' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm';
+            document.getElementById('cmd-type-text').className = type === 'text' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm';
+            document.getElementById('cmd-type-embed').className = type === 'embed' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm';
+            document.getElementById('cmd-text-fields').style.display = type === 'text' ? 'block' : 'none';
+            document.getElementById('cmd-embed-fields').style.display = type === 'embed' ? 'block' : 'none';
+        }
+
+        function setCmdColor(hex) {
+            document.getElementById('cmd_embed_color').value = hex;
+            document.getElementById('cmd-color-label').textContent = hex;
+        }
+
+        document.getElementById('cmd_embed_color').addEventListener('input', (e) => {
+            document.getElementById('cmd-color-label').textContent = e.target.value.toUpperCase();
+        });
+
+        function onCmdActionChange() {
+            const action = document.getElementById('cmd_action').value;
+            const fieldsDiv = document.getElementById('cmd-action-fields');
+            const durationDiv = document.getElementById('cmd-action-duration');
+            const reasonDiv = document.getElementById('cmd-action-reason');
+            const roleDiv = document.getElementById('cmd-action-role');
+            const hintEl = document.getElementById('cmd-action-hint');
+
+            // Show/hide entire action fields section
+            fieldsDiv.style.display = action === 'none' ? 'none' : 'block';
+
+            // Show/hide specific fields
+            durationDiv.style.display = action === 'mute' ? 'block' : 'none';
+            reasonDiv.style.display = (action === 'kick' || action === 'ban') ? 'block' : 'none';
+            roleDiv.style.display = (action === 'addrole' || action === 'removerole') ? 'block' : 'none';
+
+            // Update hint
+            hintEl.innerHTML = actionHints[action] || '';
+
+            // Auto-check admin for action commands
+            if (action !== 'none') {
+                document.getElementById('cmd_admin_only').checked = true;
+            }
+        }
+
+        function clearCmdEditor() {
+            editingCmdName = null;
+            document.getElementById('cmd-editor-title').textContent = '➕ Create Custom Command';
+            document.getElementById('cmd_name').value = '';
+            document.getElementById('cmd_name').disabled = false;
+            document.getElementById('cmd_action').value = 'none';
+            document.getElementById('cmd_action_duration').value = '10';
+            document.getElementById('cmd_action_reason').value = '';
+            document.getElementById('cmd_action_role_id').value = '';
+            document.getElementById('cmd_response').value = '';
+            document.getElementById('cmd_embed_title').value = '';
+            document.getElementById('cmd_embed_description').value = '';
+            document.getElementById('cmd_embed_color').value = '#5865F2';
+            document.getElementById('cmd-color-label').textContent = '#5865F2';
+            document.getElementById('cmd_embed_image').value = '';
+            document.getElementById('cmd_embed_thumbnail').value = '';
+            document.getElementById('cmd_embed_footer_text').value = '';
+            document.getElementById('cmd_embed_footer_icon').value = '';
+            document.getElementById('cmd_admin_only').checked = true;
+            setCmdType('embed');
+            onCmdActionChange();
+        }
+
+        function editCustomCmd(name, data) {
+            editingCmdName = name;
+            document.getElementById('cmd-editor-title').textContent = '✏️ Editing: ' + name;
+            document.getElementById('cmd_name').value = name;
+            document.getElementById('cmd_name').disabled = true;
+            document.getElementById('cmd_admin_only').checked = data.admin_only || false;
+
+            // Set action
+            document.getElementById('cmd_action').value = data.action || 'none';
+            document.getElementById('cmd_action_duration').value = data.action_duration || '10';
+            document.getElementById('cmd_action_reason').value = data.action_reason || '';
+            document.getElementById('cmd_action_role_id').value = data.action_role_id || '';
+            onCmdActionChange();
+
+            // Set response type
+            const rType = data.type || 'none';
+            setCmdType(rType);
+
+            if (rType === 'embed') {
+                const em = data.embed || {};
+                document.getElementById('cmd_embed_title').value = em.title || '';
+                document.getElementById('cmd_embed_description').value = em.description || '';
+                document.getElementById('cmd_embed_color').value = em.color || '#5865F2';
+                document.getElementById('cmd-color-label').textContent = em.color || '#5865F2';
+                document.getElementById('cmd_embed_image').value = em.image || '';
+                document.getElementById('cmd_embed_thumbnail').value = em.thumbnail || '';
+                document.getElementById('cmd_embed_footer_text').value = em.footer_text || '';
+                document.getElementById('cmd_embed_footer_icon').value = em.footer_icon || '';
+            } else if (rType === 'text') {
+                document.getElementById('cmd_response').value = data.response || '';
+            }
+
+            document.getElementById('cmd-editor-title').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function saveCustomCmd() {
+            const name = document.getElementById('cmd_name').value.trim().toLowerCase().replace(/\s+/g, '');
+            if (!name) { showToast('❌ Please enter a command name', 'error'); return; }
+
+            const action = document.getElementById('cmd_action').value;
+            const data = {
+                name: editingCmdName || name,
+                type: currentCmdType,
+                admin_only: document.getElementById('cmd_admin_only').checked,
+                action: action,
+            };
+
+            // Action-specific fields
+            if (action === 'mute') {
+                data.action_duration = parseInt(document.getElementById('cmd_action_duration').value) || 10;
+            }
+            if (action === 'kick' || action === 'ban') {
+                data.action_reason = document.getElementById('cmd_action_reason').value;
+            }
+            if (action === 'addrole' || action === 'removerole') {
+                data.action_role_id = document.getElementById('cmd_action_role_id').value;
+                if (!data.action_role_id) { showToast('❌ Please enter a Role ID', 'error'); return; }
+            }
+
+            // Response fields
+            if (currentCmdType === 'embed') {
+                data.embed_title = document.getElementById('cmd_embed_title').value;
+                data.embed_description = document.getElementById('cmd_embed_description').value;
+                data.embed_color = document.getElementById('cmd_embed_color').value;
+                data.embed_image = document.getElementById('cmd_embed_image').value;
+                data.embed_thumbnail = document.getElementById('cmd_embed_thumbnail').value;
+                data.embed_footer_text = document.getElementById('cmd_embed_footer_text').value;
+                data.embed_footer_icon = document.getElementById('cmd_embed_footer_icon').value;
+            } else if (currentCmdType === 'text') {
+                data.response = document.getElementById('cmd_response').value;
+            }
+
+            // Validation: action commands or response-only need something
+            if (action === 'none' && currentCmdType === 'none') {
+                showToast('❌ Please select an action or a response type', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/custom-commands', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('✅ Command saved! Use it right away in Discord');
+                    clearCmdEditor();
+                    loadCommandsPanel();
+                } else {
+                    showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+                }
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        async function deleteCustomCmd(name) {
+            if (!(await showConfirmModal(`Delete command "${name}"?`, 'Delete Command'))) return;
+            try {
+                const res = await fetch('/api/custom-commands', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name }),
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🗑️ Command deleted');
+                    if (editingCmdName === name) clearCmdEditor();
+                    loadCommandsPanel();
+                } else {
+                    showToast('❌ ' + (result.error || 'Failed'), 'error');
+                }
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        const actionLabels = {
+            none: '💬 Reply Only',
+            mute: '🔇 Mute',
+            unmute: '🔊 Unmute',
+            kick: '👢 Kick',
+            ban: '🔨 Ban',
+            addrole: '➕ Add Role',
+            removerole: '➖ Remove Role',
+            purge: '🧹 Purge',
+        };
+
+        async function loadCommandsPanel() {
+            try {
+                const res = await fetch('/api/commands');
+                if (!res.ok) return;
+                const data = await res.json();
+                const prefix = data.prefix || '!';
+
+                // Built-in commands table
+                const builtinBody = document.getElementById('builtin-commands-body');
+                const builtin = data.builtin || [];
+                document.getElementById('builtin-count').textContent = builtin.length;
+
+                if (builtin.length === 0) {
+                    builtinBody.innerHTML = '<tr><td colspan="4" style="padding: 12px; text-align: center; color: #888;">No commands found.</td></tr>';
+                } else {
+                    builtinBody.innerHTML = builtin.map(cmd => {
+                        const accessBadge = cmd.admin_only
+                            ? '<span style="color: #ED4245; font-size: 0.85em; font-weight: bold;">🔒 Admin</span>'
+                            : '<span style="color: #57F287; font-size: 0.85em;">🌐 Everyone</span>';
+                        return `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);" class="event-row-hover">
+                                <td style="padding: 12px;"><code style="background: rgba(88,101,242,0.2); padding: 2px 8px; border-radius: 4px; color: #a5b0ff;">${prefix}${cmd.name}</code></td>
+                                <td style="padding: 12px; color: #ddd; font-size: 0.9em;">${cmd.help}</td>
+                                <td style="padding: 12px; color: #888; font-size: 0.85em;">${cmd.cog}</td>
+                                <td style="padding: 12px;">${accessBadge}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // Custom commands table
+                const customBody = document.getElementById('custom-commands-body');
+                const custom = data.custom || {};
+                const customEntries = Object.entries(custom);
+                document.getElementById('custom-count').textContent = customEntries.length;
+
+                if (customEntries.length === 0) {
+                    customBody.innerHTML = '<tr><td colspan="5" style="padding: 12px; text-align: center; color: #888;">No custom commands yet. Create one below!</td></tr>';
+                } else {
+                    customBody.innerHTML = customEntries.map(([name, cmd]) => {
+                        const actionLabel = actionLabels[cmd.action || 'none'] || '💬 Reply Only';
+                        const accessBadge = cmd.admin_only
+                            ? '<span style="color: #ED4245; font-size: 0.85em;">🔒 Admin</span>'
+                            : '<span style="color: #57F287; font-size: 0.85em;">🌐 Everyone</span>';
+                        let preview = '—';
+                        if (cmd.action && cmd.action !== 'none') {
+                            preview = actionLabel;
+                        } else if (cmd.type === 'embed') {
+                            preview = (cmd.embed?.title || cmd.embed?.description || '—').substring(0, 50);
+                        } else if (cmd.type === 'text') {
+                            preview = (cmd.response || '—').substring(0, 50);
+                        }
+                        return `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);" class="event-row-hover">
+                                <td style="padding: 12px;"><code style="background: rgba(88,101,242,0.2); padding: 2px 8px; border-radius: 4px; color: #a5b0ff;">${prefix}${name}</code></td>
+                                <td style="padding: 12px;">${actionLabel}</td>
+                                <td style="padding: 12px;">${accessBadge}</td>
+                                <td style="padding: 12px; color: #aaa; font-size: 0.9em; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${preview}</td>
+                                <td style="padding: 12px; text-align: right; white-space: nowrap;">
+                                    <button class="btn-secondary btn-sm" onclick='editCustomCmd(${JSON.stringify(name)}, ${JSON.stringify(cmd)})'>✏️ Edit</button>
+                                    <button class="btn-danger btn-sm" style="margin-left: 4px;" onclick="deleteCustomCmd('${name}')">🗑️</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (err) { console.error('Failed to load commands:', err); }
+        }
+
+        // Load commands when panel becomes visible
+        document.querySelectorAll('.nav-item').forEach(item => {
+            if (item.dataset.panel === 'commands') {
+                item.addEventListener('click', () => loadCommandsPanel());
+            }
+        });
+
+        loadCommandsPanel();
+
+        // ═══════════════════════════════════════════════════════
+        //  JSON EDITOR SYSTEM
+        // ═══════════════════════════════════════════════════════
+
+        // CodeMirror instances keyed by panel id
+        const cmEditors = {};
+
+        function initCodeMirror(panelId) {
+            if (cmEditors[panelId]) return; // already init'd
+            const ta = document.getElementById(panelId + '-json-textarea');
+            if (!ta) return;
+            const cm = CodeMirror.fromTextArea(ta, {
+                mode: { name: 'javascript', json: true },
+                theme: 'default',
+                lineNumbers: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                indentWithTabs: false,
+                tabSize: 2,
+                lineWrapping: false,
+                extraKeys: { 'Ctrl-Enter': () => { } }
+            });
+            cm.on('change', () => {
+                validateJsonEditor(panelId);
+                updatePreviewFromJson(panelId);
+            });
+            cmEditors[panelId] = cm;
+        }
+
+        // ─── Mode Toggle ──────────────────────────────────────
+        function switchEditorMode(panelId, mode, clickedBtn) {
+            // Toggle button active states
+            const toggle = clickedBtn.closest('.editor-mode-toggle');
+            toggle.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            clickedBtn.classList.add('active');
+
+            const visualEl = document.getElementById(panelId + '-visual-editor');
+            const jsonEl = document.getElementById(panelId + '-json-editor');
+            const logEl = panelId === 'embed' ? document.getElementById('embed-log-container') : null;
+
+            // Hide log container by default
+            if (logEl) { logEl.style.display = 'none'; logEl.classList.remove('active'); }
+
+            const previewWrapper = document.getElementById('embed-preview-wrapper');
+
+            if (mode === 'log') {
+                // Show log panel — hide visual + json + live preview
+                if (visualEl) { visualEl.classList.remove('active'); visualEl.style.display = 'none'; }
+                if (jsonEl) { jsonEl.classList.remove('active'); jsonEl.style.display = 'none'; }
+                if (previewWrapper) previewWrapper.style.display = 'none';
+                if (logEl) { logEl.style.display = ''; logEl.classList.add('active'); loadMessageLog(); }
+            } else if (mode === 'json') {
+                // Sync visual → JSON before showing; restore preview
+                if (previewWrapper) previewWrapper.style.display = '';
+                if (visualEl) { visualEl.classList.remove('active'); visualEl.style.display = 'none'; }
+                if (jsonEl) { jsonEl.classList.add('active'); jsonEl.style.display = ''; }
+                const jsonStr = buildJsonFromVisual(panelId);
+                initCodeMirror(panelId);
+                const cm = cmEditors[panelId];
+                if (cm) { cm.setValue(jsonStr); cm.refresh(); }
+                validateJsonEditor(panelId);
+            } else {
+                // Visual mode — sync JSON → visual; restore preview
+                if (previewWrapper) previewWrapper.style.display = '';
+                const cm = cmEditors[panelId];
+                if (cm) { const raw = cm.getValue(); loadVisualFromJson(panelId, raw); }
+                if (jsonEl) { jsonEl.classList.remove('active'); jsonEl.style.display = 'none'; }
+                if (visualEl) { visualEl.classList.add('active'); visualEl.style.display = ''; }
+            }
+
+        }
+
+        // ─── Build JSON from Visual Fields ────────────────────
+        function buildJsonFromVisual(panelId) {
+            let data = {};
+            if (panelId === 'embed') {
+                data = {
+                    content: document.getElementById('embed_message_content').value || '',
+                    embed: {
+                        title: document.getElementById('embed_title').value || '',
+                        description: document.getElementById('embed_description').value || '',
+                        color: document.getElementById('embed_color').value || '#5865F2',
+                        author: {
+                            name: document.getElementById('embed_author_name').value || '',
+                            icon_url: document.getElementById('embed_author_icon').value || ''
+                        },
+                        thumbnail: { url: document.getElementById('embed_thumbnail').value || '' },
+                        image: { url: document.getElementById('embed_image').value || '' },
+                        footer: {
+                            text: document.getElementById('embed_footer_text').value || '',
+                            icon_url: document.getElementById('embed_footer_icon').value || ''
+                        },
+                        fields: embedFields.filter(f => f.name && f.value).map(f => ({
+                            name: f.name, value: f.value, inline: f.inline
+                        }))
+                    }
+                };
+            } else if (panelId === 'gift') {
+                data = {
+                    content: document.getElementById('gift_message').value || '',
+                    title: document.getElementById('gift_title').value || '',
+                    description: document.getElementById('gift_description').value || '',
+                    gift_link: document.getElementById('gift_link').value || '',
+                    color: document.getElementById('gift_color').value || '#FFD700',
+                    author_name: document.getElementById('gift_author_name').value || '',
+                    author_icon: document.getElementById('gift_author_icon').value || '',
+                    thumbnail: document.getElementById('gift_thumbnail').value || '',
+                    image: document.getElementById('gift_image').value || '',
+                    footer_text: document.getElementById('gift_footer_text').value || '',
+                    footer_icon: document.getElementById('gift_footer_icon').value || '',
+                    fields: giftFields.filter(f => f.name && f.value).map(f => ({
+                        name: f.name, value: f.value, inline: f.inline
+                    }))
+                };
+            } else if (panelId === 'fb') {
+                data = {
+                    content: document.getElementById('fb_message').value || '',
+                    title: document.getElementById('fb_title').value || '',
+                    description: document.getElementById('fb_description').value || '',
+                    gift_link: document.getElementById('fb_link').value || '',
+                    color: document.getElementById('fb_color').value || '#FFD700',
+                    author_name: document.getElementById('fb_author_name').value || '',
+                    author_icon: document.getElementById('fb_author_icon').value || '',
+                    thumbnail: document.getElementById('fb_thumbnail').value || '',
+                    image: document.getElementById('fb_image').value || '',
+                    footer_text: document.getElementById('fb_footer_text').value || '',
+                    footer_icon: document.getElementById('fb_footer_icon').value || '',
+                    log_channel_id: document.getElementById('fb_log_channel').value || '',
+                    admin_id: document.getElementById('fb_admin_id').value || '',
+                    response_prompt: document.getElementById('fb_response_prompt').value || '',
+                    fields: fbFields.filter(f => f.name && f.value).map(f => ({
+                        name: f.name, value: f.value, inline: f.inline
+                    }))
+                };
+            }
+            return JSON.stringify(data, null, 2);
+        }
+
+        // ─── Load Visual Fields from JSON ─────────────────────
+        function loadVisualFromJson(panelId, raw) {
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return; }
+
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+            if (panelId === 'embed') {
+                set('embed_message_content', data.content);
+                const em = data.embed || {};
+                set('embed_title', em.title);
+                set('embed_description', em.description);
+                if (em.color) { set('embed_color', em.color); document.getElementById('color-hex-label').textContent = em.color.toUpperCase(); }
+                set('embed_author_name', em.author?.name);
+                set('embed_author_icon', em.author?.icon_url);
+                set('embed_thumbnail', em.thumbnail?.url);
+                set('embed_image', em.image?.url);
+                set('embed_footer_text', em.footer?.text);
+                set('embed_footer_icon', em.footer?.icon_url);
+                embedFields = (em.fields || []).map((f, i) => ({ id: Date.now() + i, name: f.name, value: f.value, inline: !!f.inline }));
+                renderFields();
+                updatePreview();
+            } else if (panelId === 'gift') {
+                set('gift_message', data.content);
+                set('gift_title', data.title);
+                set('gift_description', data.description);
+                set('gift_link', data.gift_link);
+                if (data.color) { set('gift_color', data.color); document.getElementById('gift-color-label').textContent = data.color.toUpperCase(); }
+                set('gift_author_name', data.author_name);
+                set('gift_author_icon', data.author_icon);
+                set('gift_thumbnail', data.thumbnail);
+                set('gift_image', data.image);
+                set('gift_footer_text', data.footer_text);
+                set('gift_footer_icon', data.footer_icon);
+                giftFields = (data.fields || []).map((f, i) => ({ id: Date.now() + i, name: f.name, value: f.value, inline: !!f.inline }));
+                renderGiftFields();
+                updateGiftPreview();
+            } else if (panelId === 'fb') {
+                set('fb_message', data.content);
+                set('fb_title', data.title);
+                set('fb_description', data.description);
+                set('fb_link', data.gift_link);
+                if (data.color) { set('fb_color', data.color); document.getElementById('fb-color-label').textContent = data.color.toUpperCase(); }
+                set('fb_author_name', data.author_name);
+                set('fb_author_icon', data.author_icon);
+                set('fb_thumbnail', data.thumbnail);
+                set('fb_image', data.image);
+                set('fb_footer_text', data.footer_text);
+                set('fb_footer_icon', data.footer_icon);
+                set('fb_log_channel', data.log_channel_id);
+                set('fb_admin_id', data.admin_id);
+                set('fb_response_prompt', data.response_prompt);
+                fbFields = (data.fields || []).map((f, i) => ({ id: Date.now() + i, name: f.name, value: f.value, inline: !!f.inline }));
+                renderFbFields();
+                updateFbPreview();
+            }
+        }
+
+        // ─── Real-time Preview from JSON ──────────────────────
+        function updatePreviewFromJson(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) return;
+            let data;
+            try { data = JSON.parse(cm.getValue()); } catch (e) { return; }
+
+            if (panelId === 'embed') {
+                const em = data.embed || {};
+                // Temporarily populate fields then call existing updatePreview()
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+                set('embed_message_content', data.content);
+                set('embed_title', em.title);
+                set('embed_description', em.description);
+                if (em.color) { set('embed_color', em.color); }
+                set('embed_author_name', em.author?.name);
+                set('embed_author_icon', em.author?.icon_url);
+                set('embed_thumbnail', em.thumbnail?.url);
+                set('embed_image', em.image?.url);
+                set('embed_footer_text', em.footer?.text);
+                set('embed_footer_icon', em.footer?.icon_url);
+                updatePreview();
+            } else if (panelId === 'gift') {
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+                set('gift_message', data.content); set('gift_title', data.title);
+                set('gift_description', data.description); set('gift_link', data.gift_link);
+                if (data.color) { set('gift_color', data.color); }
+                set('gift_author_name', data.author_name); set('gift_author_icon', data.author_icon);
+                set('gift_thumbnail', data.thumbnail); set('gift_image', data.image);
+                set('gift_footer_text', data.footer_text); set('gift_footer_icon', data.footer_icon);
+                updateGiftPreview();
+            } else if (panelId === 'fb') {
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+                set('fb_message', data.content); set('fb_title', data.title);
+                set('fb_description', data.description); set('fb_link', data.gift_link);
+                if (data.color) { set('fb_color', data.color); }
+                set('fb_author_name', data.author_name); set('fb_author_icon', data.author_icon);
+                set('fb_thumbnail', data.thumbnail); set('fb_image', data.image);
+                set('fb_footer_text', data.footer_text); set('fb_footer_icon', data.footer_icon);
+                updateFbPreview();
+            }
+        }
+
+        // ─── Validate JSON ────────────────────────────────────
+        function validateJsonEditor(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) return;
+            const statusEl = document.getElementById(panelId + '-json-status');
+            const errorEl = document.getElementById(panelId + '-json-error');
+            try {
+                JSON.parse(cm.getValue());
+                if (statusEl) { statusEl.textContent = '✓ Valid'; statusEl.className = 'json-status valid'; }
+                if (errorEl) { errorEl.style.display = 'none'; }
+            } catch (e) {
+                if (statusEl) { statusEl.textContent = '✗ Invalid'; statusEl.className = 'json-status invalid'; }
+                if (errorEl) { errorEl.textContent = e.message; errorEl.style.display = 'block'; }
+            }
+        }
+
+        // ─── Format JSON ──────────────────────────────────────
+        function formatJson(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) return;
+            try {
+                const parsed = JSON.parse(cm.getValue());
+                cm.setValue(JSON.stringify(parsed, null, 2));
+                showToast('⚡ JSON formatted');
+            } catch (e) { showToast('❌ Cannot format — invalid JSON', 'error'); }
+        }
+
+        // ─── Copy JSON ────────────────────────────────────────
+        async function copyJson(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) return;
+            try {
+                await navigator.clipboard.writeText(cm.getValue());
+                showToast('📋 Copied to clipboard!');
+            } catch (e) { showToast('❌ Copy failed', 'error'); }
+        }
+
+        // ─── Paste JSON ───────────────────────────────────────
+        async function pasteJson(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) return;
+            try {
+                const text = await navigator.clipboard.readText();
+                cm.setValue(text);
+                showToast('📥 Pasted from clipboard!');
+            } catch (e) { showToast('❌ Clipboard access denied', 'error'); }
+        }
+
+        // ─── Clear JSON editor ────────────────────────────────
+        function clearJsonEditor(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) return;
+            cm.setValue('{}');
+            showToast('🧹 JSON editor cleared');
+        }
+
+        // ─── Send from Embed JSON Editor ──────────────────────
+        async function sendJsonEmbed(panelId) {
+            const cm = cmEditors[panelId];
+            if (!cm) { showToast('❌ Editor not initialized', 'error'); return; }
+            let data;
+            try { data = JSON.parse(cm.getValue()); } catch (e) {
+                showToast('❌ Invalid JSON — fix errors first', 'error'); return;
+            }
+            const channelId = (document.getElementById('embed_json_channel_id') || document.getElementById('embed_channel_id')).value.trim();
+            if (!channelId) { showToast('❌ Please enter a Channel ID', 'error'); return; }
+
+            // Build payload compatible with /api/embed/send
+            const em = data.embed || {};
+            const payload = {
+                channel_id: channelId,
+                message_content: data.content || '',
+                title: em.title || '',
+                description: em.description || '',
+                color: em.color || '#5865F2',
+                author_name: em.author?.name || '',
+                author_icon: em.author?.icon_url || '',
+                thumbnail: em.thumbnail?.url || '',
+                image: em.image?.url || '',
+                footer_text: em.footer?.text || '',
+                footer_icon: em.footer?.icon_url || '',
+                fields: (em.fields || []).filter(f => f.name && f.value),
+            };
+            try {
+                const res = await fetch('/api/embed/send', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.success) showToast('✅ Embed sent to channel!');
+                else showToast('❌ ' + (result.error || 'Failed to send'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Launch Giveaway from JSON ────────────────────────
+        async function launchGiveawayFromJson() {
+            const cm = cmEditors['gift'];
+            if (!cm) { showToast('❌ Editor not initialized', 'error'); return; }
+            let data;
+            try { data = JSON.parse(cm.getValue()); } catch (e) {
+                showToast('❌ Invalid JSON — fix errors first', 'error'); return;
+            }
+            if (!data.title) { showToast('❌ Please add a "title" field in the JSON', 'error'); return; }
+            try {
+                const res = await fetch('/api/giveaway', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🎁 Giveaway launched from JSON!');
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Launch Feedback from JSON ────────────────────────
+        async function launchFeedbackFromJson() {
+            const cm = cmEditors['fb'];
+            if (!cm) { showToast('❌ Editor not initialized', 'error'); return; }
+            let data;
+            try { data = JSON.parse(cm.getValue()); } catch (e) {
+                showToast('❌ Invalid JSON — fix errors first', 'error'); return;
+            }
+            if (!data.title) { showToast('❌ Please add a "title" field in the JSON', 'error'); return; }
+            // Merge logging fields from the JSON-mode log channel inputs
+            data.log_channel_id = data.log_channel_id || document.getElementById('fb_json_log_channel').value;
+            data.admin_id = data.admin_id || document.getElementById('fb_json_admin_id').value;
+            try {
+                const res = await fetch('/api/feedback', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('🎁 Feedback event launched from JSON!');
+                    setTimeout(() => location.reload(), 1500);
+                } else showToast('❌ ' + (result.error || 'Failed'), 'error');
+            } catch (err) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  MESSAGE LOG SYSTEM
+        // ═══════════════════════════════════════════════════════
+
+        let currentEditMessageId = null;    // null = send mode | string = edit mode
+        let currentEditChannelId = null;
+
+        // ─── Load and render the log ──────────────────────────
+        async function loadMessageLog() {
+            try {
+                const res = await fetch('/api/messages');
+                const data = await res.json();
+                renderMessageLog(data.messages || []);
+            } catch (e) {
+                document.getElementById('msg-log-list').innerHTML =
+                    '<div class="msg-log-empty">⚠️ Failed to load log.</div>';
+            }
+        }
+
+        function renderMessageLog(messages) {
+            const list = document.getElementById('msg-log-list');
+            if (!messages || messages.length === 0) {
+                list.innerHTML = '<div class="msg-log-empty">📭 No messages sent yet.<br>Send an embed to see it here.</div>';
+                return;
+            }
+            list.innerHTML = messages.map(msg => {
+                const label = (msg.label || '(no title)').substring(0, 40);
+                const ch = msg.channel_id ? `#${msg.channel_id}` : '—';
+                const when = msg.sent_at ? new Date(msg.sent_at).toLocaleString() : '';
+                const editedNote = msg.edited_at
+                    ? `<span class="msg-log-edited">(edited ${new Date(msg.edited_at).toLocaleTimeString()})</span>`
+                    : '';
+                return `
+                <div class="msg-log-entry" id="log-entry-${msg.id}">
+                    <div class="msg-log-entry-label" title="${label}">${label}</div>
+                    <div class="msg-log-entry-meta">
+                        <span class="msg-log-channel">${ch}</span>
+                        <span class="msg-log-time">${when}</span>
+                        ${editedNote}
+                    </div>
+                    <div class="msg-log-actions">
+                        <button class="msg-log-btn" onclick="loadTemplateIntoEditor('${msg.id}')">📥 Load</button>
+                        <button class="msg-log-btn edit-btn" onclick="beginEditMessage('${msg.id}', '${msg.channel_id}', '${label}')">✏️ Edit</button>
+                        <button class="msg-log-btn del-btn" onclick="deleteLogEntry('${msg.id}')">🗑️</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ─── Load template into the Visual editor ─────────────
+        async function loadTemplateIntoEditor(messageId) {
+            // Fetch messages list to get this payload
+            const res = await fetch('/api/messages');
+            const data = await res.json();
+            const msg = (data.messages || []).find(m => m.id === messageId);
+            if (!msg || !msg.payload) { showToast('❌ Could not load template', 'error'); return; }
+
+            const p = msg.payload;
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+            // Switch to visual mode first
+            const toggleBtns = document.querySelectorAll('#panel-embeds .editor-mode-toggle .mode-btn');
+            cancelEditMode();
+            const visualBtn = toggleBtns[0];
+            if (visualBtn) switchEditorMode('embed', 'visual', visualBtn);
+
+            set('embed_channel_id', p.channel_id);
+            set('embed_message_content', p.message_content);
+            set('embed_title', p.title);
+            set('embed_description', p.description);
+            set('embed_color', p.color);
+            set('embed_author_name', p.author_name);
+            set('embed_author_icon', p.author_icon);
+            set('embed_thumbnail', p.thumbnail);
+            set('embed_image', p.image);
+            set('embed_footer_text', p.footer_text);
+            set('embed_footer_icon', p.footer_icon);
+            if (p.color) {
+                const lbl = document.getElementById('color-hex-label');
+                if (lbl) lbl.textContent = p.color.toUpperCase();
+            }
+            embedFields = (p.fields || []).map((f, i) => ({ id: Date.now() + i, name: f.name, value: f.value, inline: !!f.inline }));
+            renderFields();
+            updatePreview();
+            showToast('📥 Template loaded into editor!');
+        }
+
+        // ─── Begin editing an existing Discord message ────────
+        function beginEditMessage(messageId, channelId, label) {
+            currentEditMessageId = messageId;
+            currentEditChannelId = channelId;
+
+            const banner = document.getElementById('msg-edit-banner');
+            const lbl = document.getElementById('msg-edit-label');
+            if (banner) { banner.classList.add('active'); }
+            if (lbl) { lbl.textContent = `Editing: "${label}"`; }
+
+            // Load the payload into the editor
+            loadTemplateIntoEditor(messageId);
+
+            // Re-wire the send button to edit instead of send
+            const sendBtn = document.querySelector('#panel-embeds .embed-actions .btn-primary.btn-full');
+            if (sendBtn) {
+                sendBtn.textContent = '✏️ Save Edit to Discord';
+                sendBtn.onclick = submitEditMessage;
+            }
+            showToast('✏️ Edit mode — change fields then click "Save Edit to Discord"', 'success');
+        }
+
+        function cancelEditMode() {
+            currentEditMessageId = null;
+            currentEditChannelId = null;
+            const banner = document.getElementById('msg-edit-banner');
+            if (banner) banner.classList.remove('active');
+            // Restore original send button
+            const sendBtn = document.querySelector('#panel-embeds .embed-actions .btn-primary.btn-full');
+            if (sendBtn) {
+                sendBtn.textContent = '📤 Send Embed';
+                sendBtn.onclick = sendEmbed;
+            }
+        }
+
+        // ─── Submit edited message (PATCH) ───────────────────
+        async function submitEditMessage() {
+            if (!currentEditMessageId || !currentEditChannelId) { showToast('❌ No message selected for editing', 'error'); return; }
+
+            const payload = {
+                message_id: currentEditMessageId,
+                channel_id: currentEditChannelId,
+                message_content: document.getElementById('embed_message_content').value,
+                title: document.getElementById('embed_title').value,
+                description: document.getElementById('embed_description').value,
+                color: document.getElementById('embed_color').value,
+                author_name: document.getElementById('embed_author_name').value,
+                author_icon: document.getElementById('embed_author_icon').value,
+                thumbnail: document.getElementById('embed_thumbnail').value,
+                image: document.getElementById('embed_image').value,
+                footer_text: document.getElementById('embed_footer_text').value,
+                footer_icon: document.getElementById('embed_footer_icon').value,
+                fields: embedFields.filter(f => f.name && f.value).map(f => ({ name: f.name, value: f.value, inline: f.inline })),
+            };
+
+            try {
+                const res = await fetch('/api/messages/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('✅ Message edited in Discord!');
+                    cancelEditMode();
+                    loadMessageLog();
+                } else {
+                    showToast('❌ ' + (result.error || 'Edit failed'), 'error');
+                }
+            } catch (e) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Delete from local log ────────────────────────────
+        async function deleteLogEntry(messageId) {
+            if (!(await showConfirmModal('Remove this entry from the log?\n(The Discord message itself will NOT be deleted.)', 'Remove Log Entry'))) return;
+            try {
+                const res = await fetch('/api/messages/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message_id: messageId }) });
+                const result = await res.json();
+                if (result.success) { showToast('🗑️ Removed from log'); loadMessageLog(); }
+                else showToast('❌ ' + (result.error || 'Failed to remove'), 'error');
+            } catch (e) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Auto-load log when Embeds panel is clicked ───────
+        document.querySelectorAll('.nav-item[data-panel="embeds"]').forEach(el => {
+            el.addEventListener('click', () => setTimeout(loadMessageLog, 100));
+        });
+
+        // Load on page boot if embeds panel is initially active
+        if (document.getElementById('panel-embeds')?.classList.contains('active')) {
+            loadMessageLog();
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  MESSAGES HUB — TEMPLATES SYSTEM
+        // ═══════════════════════════════════════════════════════
+
+        let allTemplates = [];   // cache from API
+        let editingTemplate = null; // name of template being edited (null = new)
+        let tmplCmEditor = null; // CodeMirror for Raw tab
+
+        // ─── Navigation between sub-views ─────────────────────
+        function showMsgView(view) {
+            ['hub', 'list', 'editor'].forEach(v =>
+                document.getElementById('msg-view-' + v).style.display = v === view ? '' : 'none'
+            );
+            if (view === 'list') fetchTemplates();
+        }
+
+        // Auto-load when Messages nav is clicked
+        document.querySelectorAll('.nav-item[data-panel="messages"]').forEach(el => {
+            el.addEventListener('click', () => showMsgView('hub'));
+        });
+
+        // ─── Load templates from API ───────────────────────────
+        async function fetchTemplates() {
+            try {
+                const res = await fetch('/api/templates');
+                const data = await res.json();
+                allTemplates = data.templates || [];
+                renderTemplateRows(allTemplates);
+            } catch (e) {
+                document.getElementById('tmpl-rows').innerHTML =
+                    '<div class="tmpl-empty-state">⚠️ Failed to load templates.</div>';
+            }
+        }
+
+        function renderTemplateRows(list) {
+            const count = document.getElementById('tmpl-count-label');
+            if (count) count.textContent = list.length;
+            const rows = document.getElementById('tmpl-rows');
+            if (!list.length) {
+                rows.innerHTML = '<div class="tmpl-empty-state">📭 No templates yet.<br>Click <strong>Create new template</strong> to get started.</div>';
+                return;
+            }
+            rows.innerHTML = list.map(t => `
+                <div class="tmpl-row" onclick="openTemplate('${t.name}')">
+                    <span class="tmpl-row-name">${t.name}</span>
+                    <div class="tmpl-row-actions">
+                        <button class="tmpl-row-btn" onclick="event.stopPropagation(); openTemplate('${t.name}')" title="Edit">📄</button>
+                        <button class="tmpl-row-btn del" onclick="event.stopPropagation(); deleteTmpl('${t.name}')" title="Delete">✕</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function filterTemplates() {
+            const q = (document.getElementById('tmpl-search')?.value || '').toLowerCase();
+            renderTemplateRows(q ? allTemplates.filter(t => t.name.toLowerCase().includes(q)) : allTemplates);
+        }
+
+        // ─── Open / create template ────────────────────────────
+        function openTemplate(name) {
+            const tmpl = allTemplates.find(t => t.name === name);
+            if (!tmpl) return;
+            editingTemplate = name;
+            document.getElementById('tmpl-name-input').value = name;
+            document.getElementById('tmpl-editor-breadname').textContent = name;
+
+            const p = tmpl.payload || {};
+            const isFlat = !p.embed && !p.embeds && p.message_content !== undefined;
+            const em = isFlat ? p : (p.embed || (p.embeds && p.embeds[0]) || {});
+
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+
+            set('tmpl_content', isFlat ? p.message_content : p.content);
+            set('tmpl_title', em.title);
+            set('tmpl_description', em.description);
+            set('tmpl_color', em.color || '#5865F2');
+            set('tmpl_author_name', isFlat ? p.author_name : em.author?.name);
+            set('tmpl_author_icon', isFlat ? p.author_icon : em.author?.icon_url);
+            set('tmpl_thumbnail', isFlat ? p.thumbnail : em.thumbnail?.url);
+            set('tmpl_image', isFlat ? p.image : em.image?.url);
+            set('tmpl_footer_text', isFlat ? p.footer_text : em.footer?.text);
+            set('tmpl_footer_icon', isFlat ? p.footer_icon : em.footer?.icon_url);
+
+            showMsgView('editor');
+            switchTmplSubtab('visual', document.querySelector('.tmpl-subtab'));
+            updateTmplPreview();
+        }
+
+
+        function openNewTemplate() {
+            editingTemplate = null;
+            document.getElementById('tmpl-name-input').value = '';
+            document.getElementById('tmpl-editor-breadname').textContent = 'New template';
+            ['tmpl_content', 'tmpl_title', 'tmpl_description', 'tmpl_author_name',
+                'tmpl_thumbnail', 'tmpl_image', 'tmpl_footer_text'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+            const c = document.getElementById('tmpl_color'); if (c) c.value = '#5865F2';
+            showMsgView('editor');
+            switchTmplSubtab('visual', document.querySelector('.tmpl-subtab'));
+            updateTmplPreview();
+        }
+
+
+        // ─── Sub-tab switching (Visual / Raw) ─────────────
+        function switchTmplSubtab(sub, btn) {
+            document.querySelectorAll('.tmpl-subtab').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            ['visual', 'raw'].forEach(s => {
+                const el = document.getElementById('tmpl-subtab-' + s);
+                if (el) el.style.display = s === sub ? '' : 'none';
+            });
+            if (sub === 'raw') {
+                // Init CodeMirror for Raw tab (only once)
+                if (!tmplCmEditor) {
+                    const ta = document.getElementById('tmpl-json-textarea');
+                    if (ta && typeof CodeMirror !== 'undefined') {
+                        tmplCmEditor = CodeMirror.fromTextArea(ta, {
+                            mode: { name: 'javascript', json: true },
+                            theme: 'default', lineNumbers: true,
+                            matchBrackets: true, autoCloseBrackets: true,
+                            tabSize: 2, lineWrapping: false,
+                        });
+                        // On every change: validate + update live preview
+                        tmplCmEditor.on('change', () => {
+                            try {
+                                const parsed = JSON.parse(tmplCmEditor.getValue());
+                                setTmplJsonStatus(true);
+                                updateTmplPreviewFromJson(parsed);
+                            } catch {
+                                setTmplJsonStatus(false);
+                            }
+                        });
+                    }
+                }
+                // Sync Visual -> JSON
+                if (tmplCmEditor) {
+                    tmplCmEditor.setValue(JSON.stringify(buildTmplPayload(), null, 2));
+                }
+            } else if (sub === 'visual') {
+                // Sync JSON -> Visual
+                if (tmplCmEditor) {
+                    try {
+                        const j = JSON.parse(tmplCmEditor.getValue());
+                        const isFlat = !j.embed && !j.embeds && j.message_content !== undefined;
+                        const em = isFlat ? j : (j.embed || (j.embeds && j.embeds[0]) || {});
+
+                        const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+                        set('tmpl_content', isFlat ? j.message_content : j.content);
+                        set('tmpl_title', em.title);
+                        set('tmpl_description', em.description);
+                        if (em.color) set('tmpl_color', em.color);
+                        set('tmpl_author_name', isFlat ? j.author_name : em.author?.name);
+                        set('tmpl_author_icon', isFlat ? j.author_icon : em.author?.icon_url);
+                        set('tmpl_thumbnail', isFlat ? j.thumbnail : em.thumbnail?.url);
+                        set('tmpl_image', isFlat ? j.image : em.image?.url);
+                        set('tmpl_footer_text', isFlat ? j.footer_text : em.footer?.text);
+                        set('tmpl_footer_icon', isFlat ? j.footer_icon : em.footer?.icon_url);
+                    } catch (e) { /* ignore invalid JSON when switching back */ }
+                }
+            }
+        }
+
+        function setTmplJsonStatus(valid) {
+            const el = document.getElementById('tmpl-json-valid');
+            if (!el) return;
+            el.textContent = valid ? '✓ Valid' : '✗ Invalid';
+            el.className = 'json-status ' + (valid ? 'valid' : 'invalid');
+        }
+
+        // ─── Build payload from visual fields (Standard Discord JSON format) ───
+        function buildTmplPayload() {
+            const g = id => document.getElementById(id)?.value || '';
+            const t = g('tmpl_title'), d = g('tmpl_description'), c = g('tmpl_color');
+            const an = g('tmpl_author_name'), ai = g('tmpl_author_icon');
+            const th = g('tmpl_thumbnail'), im = g('tmpl_image');
+            const ft = g('tmpl_footer_text'), fi = g('tmpl_footer_icon');
+
+            let embed = null;
+            if (t || d || c !== '#5865F2' || an || ai || th || im || ft || fi) {
+                embed = {
+                    title: t,
+                    description: d,
+                    color: c || '#5865F2'
+                };
+                if (an || ai) embed.author = { name: an, icon_url: ai };
+                if (th) embed.thumbnail = { url: th };
+                if (im) embed.image = { url: im };
+                if (ft || fi) embed.footer = { text: ft, icon_url: fi };
+            }
+
+            const data = { content: g('tmpl_content') };
+            if (embed) data.embed = embed;
+            return data;
+        }
+
+        // ─── Preview update (from visual fields) ──────────────
+        function updateTmplPreview() {
+            updateTmplPreviewFromJson(buildTmplPayload());
+        }
+
+        function updateTmplPreviewFromJson(j) {
+            // Support both flat format and standard Discord JSON
+            const isFlat = !j.embed && !j.embeds && j.message_content !== undefined;
+            const p = isFlat ? j : (j.embed || (j.embeds && j.embeds[0]) || {});
+            const content = isFlat ? j.message_content : j.content;
+
+            const show = (id, val) => {
+                const el = document.getElementById(id); if (!el) return;
+                el.style.display = val ? '' : 'none';
+                el.textContent = val || '';
+            };
+            show('tmpl-preview-content', content);
+            show('tmpl-preview-title', p.title);
+            show('tmpl-preview-desc', p.description);
+
+            // Author
+            const authEl = document.getElementById('tmpl-preview-author');
+            const authNm = document.getElementById('tmpl-preview-author-name');
+            const authIc = document.getElementById('tmpl-preview-author-icon');
+            if (authEl && authNm && authIc) {
+                const aName = isFlat ? p.author_name : p.author?.name;
+                const aIcon = isFlat ? p.author_icon : p.author?.icon_url;
+                authEl.style.display = aName || aIcon ? '' : 'none';
+                authNm.textContent = aName || '';
+                authIc.src = aIcon || '';
+                authIc.style.display = aIcon ? '' : 'none';
+            }
+
+            // Thumbnail
+            const thumbW = document.getElementById('tmpl-preview-thumb-wrapper');
+            const thumbI = document.getElementById('tmpl-preview-thumb');
+            const tUrl = isFlat ? p.thumbnail : p.thumbnail?.url;
+            if (thumbW && thumbI) { thumbW.style.display = tUrl ? '' : 'none'; thumbI.src = tUrl || ''; }
+
+            // Image
+            const imgW = document.getElementById('tmpl-preview-image-wrapper');
+            const imgI = document.getElementById('tmpl-preview-image');
+            const iUrl = isFlat ? p.image : p.image?.url;
+            if (imgW && imgI) { imgW.style.display = iUrl ? '' : 'none'; imgI.src = iUrl || ''; }
+
+            // Footer
+            const footerEl = document.getElementById('tmpl-preview-footer');
+            const footerTx = document.getElementById('tmpl-preview-footer-text');
+            const footerIc = document.getElementById('tmpl-preview-footer-icon');
+            if (footerEl && footerTx && footerIc) {
+                const fText = isFlat ? p.footer_text : p.footer?.text;
+                const fIcon = isFlat ? p.footer_icon : p.footer?.icon_url;
+                footerEl.style.display = fText || fIcon ? '' : 'none';
+                footerTx.textContent = fText || '';
+                footerIc.src = fIcon || '';
+                footerIc.style.display = fIcon ? '' : 'none';
+            }
+
+            // Color bar
+            const bar = document.getElementById('tmpl-preview-color-bar');
+            if (bar) bar.style.background = p.color || '#5865F2';
+        }
+
+        // ─── Save template ─────────────────────────────────────
+        async function saveTmplFromVisual() {
+            const name = document.getElementById('tmpl-name-input').value.trim();
+            if (!name) { showToast('❌ Please enter a template name', 'error'); return; }
+            const payload = buildTmplPayload();
+            await doSaveTemplate(name, payload);
+        }
+
+        async function saveTmplFromJson() {
+            const name = document.getElementById('tmpl-name-input').value.trim();
+            if (!name) { showToast('❌ Please enter a template name', 'error'); return; }
+            let payload;
+            try { payload = JSON.parse(tmplCmEditor ? tmplCmEditor.getValue() : '{}'); }
+            catch { showToast('❌ Invalid JSON — fix errors before saving', 'error'); return; }
+            await doSaveTemplate(name, payload);
+        }
+
+        async function doSaveTemplate(name, payload) {
+            try {
+                const res = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, payload })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Template "' + name + '" saved!');
+                    editingTemplate = name;
+                    document.getElementById('tmpl-editor-breadname').textContent = name;
+                    await fetchTemplates();
+                } else showToast('❌ ' + (data.error || 'Failed to save'), 'error');
+            } catch (e) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Delete template ───────────────────────────────────
+        async function deleteTmpl(name) {
+            if (!(await showConfirmModal('Delete template "' + name + '"?', 'Delete Template'))) return;
+            try {
+                const res = await fetch('/api/templates', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.success) { showToast('🗑️ Template deleted'); fetchTemplates(); }
+                else showToast('❌ ' + (data.error || 'Failed'), 'error');
+            } catch (e) { showToast('❌ Network error', 'error'); }
+        }
+
+        // ─── Send template (Use tab) ───────────────────────────
+        async function sendCurrentTemplate() {
+            const name = document.getElementById('tmpl-name-input').value.trim();
+            const ch = document.getElementById('tmpl-send-channel').value.trim();
+            if (!name) { showToast('❌ Save the template first', 'error'); return; }
+            if (!ch) { showToast('❌ Enter a channel ID', 'error'); return; }
+            try {
+                const res = await fetch('/api/templates/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, channel_id: ch })
+                });
+                const data = await res.json();
+                if (data.success) showToast('✅ Sent "' + name + '" to Discord!');
+                else showToast('❌ ' + (data.error || 'Failed to send'), 'error');
+            } catch (e) { showToast('❌ Network error', 'error'); }
+        }
+
+        // Format / copy helpers for Raw tab
+        function formatTmplJson() {
+            if (!tmplCmEditor) return;
+            try {
+                const pretty = JSON.stringify(JSON.parse(tmplCmEditor.getValue()), null, 2);
+                tmplCmEditor.setValue(pretty);
+            } catch { showToast('❌ Invalid JSON', 'error'); }
+        }
+        function copyTmplJson() {
+            if (!tmplCmEditor) return;
+            navigator.clipboard.writeText(tmplCmEditor.getValue()).then(() => showToast('📋 Copied!'));
+        }
+
+        // ─── Collapsible embed log toggle ──────────────────────
+        let msgLogOpen = false;
+        function toggleMsgLog() {
+            msgLogOpen = !msgLogOpen;
+            const panel = document.getElementById('embed-msg-log-panel');
+            const arrow = document.getElementById('msg-log-arrow');
+            if (msgLogOpen) {
+                panel.classList.remove('msg-log-collapsed');
+                arrow.classList.add('open');
+                loadMessageLog();
+            } else {
+                panel.classList.add('msg-log-collapsed');
+                arrow.classList.remove('open');
+            }
+        }
+        // ─── Custom Confirm Dialog ──────────────────────
+        function showConfirmModal(message, title = 'Confirm Action') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirm-modal');
+                document.getElementById('confirm-modal-title').textContent = title;
+                document.getElementById('confirm-modal-msg').innerHTML = message.replace(/\n/g, '<br>');
+                modal.style.display = 'flex';
+
+                const btnYes = document.getElementById('confirm-btn-yes');
+                const btnNo = document.getElementById('confirm-btn-no');
+
+                const cleanup = () => {
+                    modal.style.display = 'none';
+                    btnYes.removeEventListener('click', onYes);
+                    btnNo.removeEventListener('click', onNo);
+                };
+
+                const onYes = () => { cleanup(); resolve(true); };
+                const onNo = () => { cleanup(); resolve(false); };
+
+                btnYes.addEventListener('click', onYes);
+                btnNo.addEventListener('click', onNo);
+            });
+        }
+
+    </script>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="custom-modal-backdrop" style="display:none;">
+        <div class="custom-modal">
+            <h3 id="confirm-modal-title">Confirm Action</h3>
+            <p id="confirm-modal-msg"></p>
+            <div class="custom-modal-actions"
+                style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+                <button id="confirm-btn-no" class="btn-secondary">Cancel</button>
+                <button id="confirm-btn-yes" class="btn-primary"
+                    style="background:var(--danger); border-color:var(--danger)">OK</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

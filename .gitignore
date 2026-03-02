@@ -1,0 +1,10 @@
+.env
+.secret_key
+__pycache__/
+*.pyc
+.DS_Store
+data/
+admin_accounts.json
+owner.json
+server_logins.json
+audit_logs.json

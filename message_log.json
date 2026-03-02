@@ -1,0 +1,69 @@
+[
+  {
+    "id": "1477992010295021629",
+    "channel_id": "1477693874162892872",
+    "sent_at": "2026-03-02T11:32:35.526469+00:00",
+    "label": "✅ JSON Editor Test",
+    "payload": {
+      "channel_id": "1477693874162892872",
+      "message_content": "🎉 Hey! Check out this test message from the JSON editor!",
+      "title": "✅ JSON Editor Test",
+      "description": "This message was designed using the raw JSON editor in the dashboard.\n\nYou can edit any field directly in JSON!",
+      "color": "#5865F2",
+      "author_name": "Bot Dashboard",
+      "author_icon": "",
+      "thumbnail": "https://cdn.discordapp.com/embed/avatars/0.png",
+      "image": "",
+      "footer_text": "Sent via JSON Editor • Dashboard v2",
+      "footer_icon": "",
+      "fields": [
+        {
+          "name": "🎨 Mode",
+          "value": "JSON Editor",
+          "inline": true
+        },
+        {
+          "name": "📡 Status",
+          "value": "Working!",
+          "inline": true
+        },
+        {
+          "name": "🔧 Two-way Sync",
+          "value": "Switch to Visual mode to see fields filled in",
+          "inline": false
+        }
+      ]
+    },
+    "embed_snapshot": {
+      "title": "✅ JSON Editor Test",
+      "description": "This message was designed using the raw JSON editor in the dashboard.\n\nYou can edit any field directly in JSON!",
+      "color": 5793266,
+      "author": {
+        "name": "Bot Dashboard"
+      },
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/embed/avatars/0.png"
+      },
+      "footer": {
+        "text": "Sent via JSON Editor • Dashboard v2"
+      },
+      "fields": [
+        {
+          "name": "🎨 Mode",
+          "value": "JSON Editor",
+          "inline": true
+        },
+        {
+          "name": "📡 Status",
+          "value": "Working!",
+          "inline": true
+        },
+        {
+          "name": "🔧 Two-way Sync",
+          "value": "Switch to Visual mode to see fields filled in",
+          "inline": false
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Dashboard — Select Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f0f1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #7289da, #99aab5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: #99aab5;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+        }
+
+        .server-card {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(114, 137, 218, 0.2);
+            border-radius: 16px;
+            padding: 24px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .server-card:hover {
+            transform: translateY(-4px);
+            border-color: #5865F2;
+            box-shadow: 0 8px 24px rgba(88, 101, 242, 0.2);
+        }
+
+        .server-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #2f3136;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .server-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .server-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background: #18191c;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 32px;
+            width: 90%;
+            max-width: 400px;
+            animation: modalPop 0.2s ease-out;
+            text-align: left;
+        }
+
+        @keyframes modalPop {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal h2 {
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .modal p {
+            color: #b9bbbe;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #8e9297;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            background: #202225;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            color: #dcddde;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #5865F2;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: #fff;
+        }
+
+        .btn-cancel:hover {
+            text-decoration: underline;
+        }
+
+        .btn-primary {
+            background: #5865F2;
+            color: #fff;
+        }
+
+        .error-msg {
+            color: #f04747;
+            font-size: 14px;
+            margin-top: 12px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Select a Server</h1>
+        <p class="subtitle">Choose a server you administer to log into the dashboard.</p>
+
+        <div class="server-grid">
+            {% for g in guilds %}
+            <div class="server-card"
+                onclick="openLoginModal('{{ g.id }}', '{{ g.name | replace('\'', '\\\'') | escape }}')">
+                <div class="server-icon">
+                    {% if g.icon %}
+                    <img src="https://cdn.discordapp.com/icons/{{ g.id }}/{{ g.icon }}.png?size=128" alt="{{ g.name }}">
+                    {% else %}
+                    {{ g.name[0] }}
+                    {% endif %}
+                </div>
+                <div class="server-name">{{ g.name }}</div>
+            </div>
+            {% else %}
+            <div style="grid-column: 1/-1; padding: 40px; color: #8e9297;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                Oops! Looks like you don't have Administrator permissions in any servers the bot is in.<br>
+                Invite the bot to a server where you are an Admin first.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal-backdrop">
+        <div class="modal">
+            <h2 id="modal-server-name">Login to Server</h2>
+            <p>Enter the Dashboard Login ID and Password provided by the bot owner to access this server.</p>
+
+            <div class="form-group">
+                <label class="form-label">Login ID</label>
+                <input type="text" id="login_id_input" class="form-control" autocomplete="off" spellcheck="false"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="password_input" class="form-control" required>
+            </div>
+
+            <div id="login-error" class="error-msg"></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeLoginModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" id="login-submit-btn"
+                    onclick="submitLogin()">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentGuildId = null;
+        const isOwner = {{ 'true' if is_owner else 'false' }};
+
+        async function openLoginModal(guildId, guildName) {
+            currentGuildId = guildId;
+
+            if (isOwner) {
+                // Bypass the password modal and immediately login as owner
+                try {
+                    const res = await fetch('/api/owner-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ guild_id: guildId })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        window.location.href = '/';
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Owner fast-login failed", e);
+                }
+            }
+
+            // If not owner OR if owner login failed, show the password modal
+            document.getElementById('modal-server-name').textContent = guildName;
+            document.getElementById('login_id_input').value = '';
+            document.getElementById('password_input').value = '';
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('login_id_input').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').style.display = 'none';
+            currentGuildId = null;
+        }
+
+        async function submitLogin() {
+            const loginId = document.getElementById('login_id_input').value.trim();
+            const password = document.getElementById('password_input').value;
+            const errorEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-submit-btn');
+
+            if (!loginId || !password) {
+                errorEl.textContent = 'Please enter both ID and Password.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+            errorEl.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/server-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        guild_id: currentGuildId,
+                        login_id: loginId,
+                        password: password
+                    })
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    window.location.href = '/';
+                } else {
+                    errorEl.textContent = '❌ ' + (result.error || 'Invalid credentials.');
+                    errorEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Login';
+                }
+            } catch (err) {
+                errorEl.textContent = '❌ Network error connecting to server.';
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Login';
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('password_input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') submitLogin();
+        });
+        document.getElementById('login_id_input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') document.getElementById('password_input').focus();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,43 @@
+{
+  "1772401931": {
+    "title": "zazazaza",
+    "created_at": "2026-03-01T21:52:11.312734+00:00",
+    "claims": {
+      "1466794884970057890": {
+        "username": "bhangbhosda69_",
+        "avatar": "https://cdn.discordapp.com/embed/avatars/2.png",
+        "claimed_at": "2026-03-01T22:24:58.620978+00:00",
+        "response": "saSASAS"
+      }
+    },
+    "past_resets": [
+      {
+        "reset_at": "2026-03-01T21:58:37.819404+00:00",
+        "claims": {
+          "1270989983540449304": {
+            "username": "meteor4",
+            "avatar": "https://cdn.discordapp.com/avatars/1270989983540449304/c5c4304e8ca7cbe9279d2b47e3cbc3da.png?size=1024",
+            "claimed_at": "2026-03-01T21:52:46.370172+00:00",
+            "response": "THANKYOU FOR YOUR GIFT"
+          }
+        }
+      },
+      {
+        "reset_at": "2026-03-01T22:24:43.241095+00:00",
+        "claims": {
+          "1270989983540449304": {
+            "username": "meteor4",
+            "avatar": "https://cdn.discordapp.com/avatars/1270989983540449304/c5c4304e8ca7cbe9279d2b47e3cbc3da.png?size=1024",
+            "claimed_at": "2026-03-01T21:59:13.841346+00:00",
+            "response": "HEHEEHEHEHE"
+          },
+          "1466794884970057890": {
+            "username": "bhangbhosda69_",
+            "avatar": "https://cdn.discordapp.com/embed/avatars/2.png",
+            "claimed_at": "2026-03-01T22:23:43.210575+00:00"
+          }
+        }
+      }
+    ]
+  }
+}
