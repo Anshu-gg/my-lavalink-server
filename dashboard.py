@@ -220,9 +220,13 @@ def extract_channel_id(input_str):
     # If it's a URL, split by '/' and take the last part
     if "discord.com/channels/" in input_str or "ptb.discord.com/channels/" in input_str or "canary.discord.com/channels/" in input_str:
         parts = input_str.split('/')
-        return parts[-1].strip()
+        input_str = parts[-1].strip()
         
-    return input_str
+    # Final check: A valid Discord channel ID is strictly numeric.
+    # We strip any weird punctuation they might have typed.
+    import re
+    cleaned = re.sub(r'[^0-9]', '', input_str)
+    return cleaned
 
 
 # ─── Routes ───────────────────────────────────────────────────────
@@ -1048,11 +1052,14 @@ def send_embed():
 
             return jsonify({"success": True, "message_id": message_id})
         else:
-            error_data = response.json()
-            return jsonify({"error": error_data.get("message", "Failed to send")}), 400
+            try:
+                error_data = response.json()
+                return jsonify({"error": error_data.get("message", f"Failed to send (Discord returned {response.status_code})")}), 400
+            except Exception:
+                return jsonify({"error": f"Discord API returned an unexpected error ({response.status_code})"}), 400
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Backend Error: {str(e)}"}), 500
 
 
 # ─── Message Log Endpoints ────────────────────────────────────────
@@ -1129,10 +1136,13 @@ def edit_discord_message():
             save_message_log(guild_id, log)
             return jsonify({"success": True})
         else:
-            err = response.json()
-            return jsonify({"error": err.get("message", "Failed to edit")}), 400
+            try:
+                err = response.json()
+                return jsonify({"error": err.get("message", f"Failed to edit (Discord returned {response.status_code})")}), 400
+            except Exception:
+                return jsonify({"error": f"Discord API returned an unexpected error ({response.status_code})"}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Backend Error: {str(e)}"}), 500
 
 
 @app.route("/api/messages/delete", methods=["POST"])
@@ -1264,9 +1274,13 @@ def send_template():
             save_message_log(guild_id, log[:50])
             return jsonify({"success": True, "message_id": msg_id})
         else:
-            return jsonify({"error": resp.json().get("message", "Failed to send")}), 400
+            try:
+                err_data = resp.json()
+                return jsonify({"error": err_data.get("message", f"Failed to send (Discord returned {resp.status_code})")}), 400
+            except Exception:
+                return jsonify({"error": f"Discord API returned an unexpected error ({resp.status_code})"}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Backend Error: {str(e)}"}), 500
 
 
 # ─── Run (used when started from bot.py in a thread) ───────────────
