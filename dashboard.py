@@ -35,7 +35,10 @@ else:
 
 # ─── Config ───────────────────────────────────────────────────────
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=1)
-app.config['SESSION_COOKIE_SECURE'] = False # Set True in production with HTTPS
+if os.getenv("RENDER"):
+    app.config['SESSION_COOKIE_SECURE'] = True # Secure cookies in production
+else:
+    app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # ─── Paths ────────────────────────────────────────────────────────
@@ -225,6 +228,7 @@ def callback():
             "redirect_uri": REDIRECT_URI,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=10
     )
 
     if token_response.status_code != 200:
@@ -237,6 +241,7 @@ def callback():
     user_response = requests.get(
         f"{DISCORD_API}/users/@me",
         headers={"Authorization": f"Bearer {access_token}"},
+        timeout=10
     )
 
     if user_response.status_code != 200:
@@ -257,6 +262,7 @@ def callback():
     guilds_response = requests.get(
         f"{DISCORD_API}/users/@me/guilds",
         headers={"Authorization": f"Bearer {access_token}"},
+        timeout=10
     )
     
     admin_guilds = []
@@ -294,14 +300,18 @@ def servers():
     
     # Fetch bot's guilds to find the intersection
     token = os.getenv("DISCORD_TOKEN")
-    bot_guilds_response = requests.get(
-        f"{DISCORD_API}/users/@me/guilds",
-        headers={"Authorization": f"Bot {token}"}
-    )
-    bot_guild_ids = set()
-    if bot_guilds_response.status_code == 200:
-        for g in bot_guilds_response.json():
-            bot_guild_ids.add(g["id"])
+    try:
+        bot_guilds_response = requests.get(
+            f"{DISCORD_API}/users/@me/guilds",
+            headers={"Authorization": f"Bot {token}"},
+            timeout=10
+        )
+        bot_guild_ids = set()
+        if bot_guilds_response.status_code == 200:
+            for g in bot_guilds_response.json():
+                bot_guild_ids.add(g["id"])
+    except requests.exceptions.RequestException:
+        bot_guild_ids = set() # Fail gracefully if Discord API is unreachable
             
     # Include only guilds where the bot is also present
     valid_guilds = [g for g in admin_guilds if g["id"] in bot_guild_ids]
@@ -370,14 +380,17 @@ def admin_dashboard():
     
     # Fetch bot's guilds
     token = os.getenv("DISCORD_TOKEN")
-    bot_guilds_response = requests.get(
-        f"{DISCORD_API}/users/@me/guilds",
-        headers={"Authorization": f"Bot {token}"}
-    )
-    
-    bot_guilds = []
-    if bot_guilds_response.status_code == 200:
-        bot_guilds = bot_guilds_response.json()
+    try:
+        bot_guilds_response = requests.get(
+            f"{DISCORD_API}/users/@me/guilds",
+            headers={"Authorization": f"Bot {token}"},
+            timeout=10
+        )
+        bot_guilds = []
+        if bot_guilds_response.status_code == 200:
+            bot_guilds = bot_guilds_response.json()
+    except requests.exceptions.RequestException:
+        bot_guilds = []
         
     accounts = load_admin_accounts()
     logs = []
@@ -877,11 +890,13 @@ def proxy_image():
     if not url:
         return "", 400
     try:
-        resp = requests.get(url, timeout=5, stream=True)
+        resp = requests.get(url, timeout=10, stream=True)
         content_type = resp.headers.get("Content-Type", "").lower()
         if not content_type.startswith("image/"):
             return "Not an image", 415
         return Response(resp.content, content_type=content_type)
+    except requests.exceptions.Timeout:
+        return "Image fetch timed out", 504
     except Exception:
         return "", 404
 
@@ -957,6 +972,7 @@ def send_embed():
                 "Authorization": f"Bot {bot_token}",
                 "Content-Type": "application/json",
             },
+            timeout=10
         )
 
         if response.status_code in (200, 201):
@@ -1041,6 +1057,7 @@ def edit_discord_message():
             f"{DISCORD_API}/channels/{channel_id}/messages/{message_id}",
             json=payload,
             headers={"Authorization": f"Bot {bot_token}", "Content-Type": "application/json"},
+            timeout=10
         )
         if response.status_code == 200:
             # Update the log entry
@@ -1177,6 +1194,7 @@ def send_template():
             f"{DISCORD_API}/channels/{channel_id}/messages",
             json=payload_to_send,
             headers={"Authorization": f"Bot {bot_token}", "Content-Type": "application/json"},
+            timeout=10
         )
         if resp.status_code in (200, 201):
             msg_id = resp.json().get("id", "")

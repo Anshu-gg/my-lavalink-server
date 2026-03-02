@@ -1,0 +1,73 @@
+# 🔍 Codebase Deep Dive: Nook & Corner Guide
+
+This document provides a comprehensive explanation of how your Discord Bot and Web Dashboard work together.
+
+---
+
+## 🏗️ 1. Core Architecture (The "Brain")
+The bot is built using **Python** and the **`discord.py`** library. It uses a **Modular (Cog-based) Design**, meaning features are separated into different files for organization.
+
+### [bot.py](file:///c:/Users/Anshu/Documents/discord%20bot/bot.py) (The Entry Point)
+- **Role**: This is the first file that runs. It connects to Discord and "wakes up" the bot.
+- **Dynamic Prefix**: It looks at your [config.json](file:///c:/Users/Anshu/Documents/discord%20bot/config.json) for each server. If you changed the prefix to `.`, the bot knows to listen for `.` instead of `!`.
+- **Cog Loader**: It automatically scans the `/cogs` folder and loads every Python file it finds.
+- **Background Dashboard**: It uses a "Thread" to start the Flask Dashboard at the same time the bot starts, so they both run at once.
+
+---
+
+## 🌐 2. Web Dashboard (The "Face")
+The dashboard is built using **Flask** (a Python web framework).
+
+### `dashboard.py`
+- **OAuth2 Security**: Uses the official Discord Login system. When you click "Login," it sends you to Discord to verify your identity.
+- **Active Guild Memory**: When you click a server to manage, it saves that `guild_id` in your browser's "session" so it remembers which server you are editing.
+- **Data Bridge**: It reads the `.json` files from your computer and turns them into the buttons and text you see on the website.
+
+---
+
+## 🛠️ 3. Modular Features (The "Limbs")
+All bot features live inside the `/cogs` directory.
+
+- **`freegift.py`**: Handles the `!free` command. It checks if a user has already claimed a gift by looking at `claims.json`.
+- **`moderation.py`**: Contains `!kick`, `!ban`, and the Slash command equivalents (`/kick`).
+- **`help.py`**: Generates the custom help embed listing all commands.
+- **`setwelcome.py`**: Saves your custom welcome messages and channel IDs to the database.
+
+---
+
+## 🎨 4. User Interface (The "Look")
+These files control how the dashboard looks in your browser.
+
+- **`templates/` (HTML)**:
+  - `login.html`: The landing page with the "Login with Discord" button.
+  - `server_select.html`: The grid showing all the servers where you have permissions.
+  - `dashboard.html`: The main management page with tabs for Settings, Logs, and Giveaways.
+  - `admin.html`: The Global Owner panel for managing Login IDs.
+- **`static/style.css`**: The design file. It handles the "Glassmorphism" effect (blurred backgrounds), colors, animations, and the sidebar layout.
+
+---
+
+## 💾 5. Data Storage (The "Memory")
+The bot doesn't use a professional SQL database (yet!); it uses **JSON files**.
+
+- **`/data/[GuildID]/`**: Every server gets its own folder.
+  - `config.json`: Stores prefix, welcome settings, and reward settings.
+  - `claims.json`: Keeps track of who claimed the `!free` gift.
+  - `audit_logs.json`: Stores a history of every change made through the dashboard.
+- **`admin_accounts.json`**: Stores the custom Login IDs and Passwords you create for other server owners.
+
+---
+
+## 🚀 6. Hosting (The "Engine")
+- **`start.sh`**: A simple script that tells Render to "run `bot.py`."
+- **`requirements.txt`**: A list of all libraries (Flask, discord.py, requests) that Render needs to download to make the code run.
+- **`.env` (Hidden)**: The most important file. It stores your **DISCORD_TOKEN**. Without this, the bot cannot connect to the internet.
+
+---
+
+### 💡 Summary of Logic Flow
+1. **User types `!free`** in Discord.
+2. **`bot.py`** receives the message and hands it to **`freegift.py`**.
+3. **`freegift.py`** checks **`claims.json`** to see if that user is already on the list.
+4. If not, it sends a DM and adds the user to **`claims.json`**.
+5. You can then see this claim instantly on the **Web Dashboard** because **`dashboard.py`** is reading the same **`claims.json`** file!
