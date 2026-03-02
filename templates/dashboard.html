@@ -163,8 +163,8 @@
                         <div class="card">
                             <h3>📤 Send To Channel</h3>
                             <div class="form-group">
-                                <label for="embed_channel_id">Channel ID</label>
-                                <input type="text" id="embed_channel_id" placeholder="Paste channel ID here">
+                                <label for="embed_channel_id">Channel ID or Link</label>
+                                <input type="text" id="embed_channel_id" placeholder="Paste channel ID or link here">
                             </div>
                             <div class="form-group">
                                 <label for="embed_message_content">Message Text <span class="optional">(above the
@@ -295,8 +295,9 @@
                         <div class="card" style="margin-top:16px">
                             <h3>📤 Send To Channel</h3>
                             <div class="form-group">
-                                <label for="embed_json_channel_id">Channel ID</label>
-                                <input type="text" id="embed_json_channel_id" placeholder="Paste channel ID here">
+                                <label for="embed_json_channel_id">Channel ID or Link</label>
+                                <input type="text" id="embed_json_channel_id"
+                                    placeholder="Paste channel ID or link here">
                             </div>
                         </div>
                         <div class="embed-actions" style="margin-top:16px">
@@ -584,8 +585,8 @@
                         <div class="card" style="margin-top:14px">
                             <h3>📤 Send to Channel</h3>
                             <div class="form-group" style="margin-bottom:10px">
-                                <label for="tmpl-send-channel">Channel ID</label>
-                                <input type="text" id="tmpl-send-channel" placeholder="Paste channel ID here">
+                                <label for="tmpl-send-channel">Channel ID or Link</label>
+                                <input type="text" id="tmpl-send-channel" placeholder="Paste channel ID or link here">
                             </div>
                             <button onclick="sendCurrentTemplate()" class="btn-primary btn-full">📤 Send to
                                 Discord</button>
@@ -894,7 +895,7 @@
                         <div class="card">
                             <h3>🔗 Logging Setup</h3>
                             <div class="form-group">
-                                <label for="fb_log_channel">Log Channel ID</label>
+                                <label for="fb_log_channel">Log Channel ID or Link</label>
                                 <input type="text" id="fb_log_channel" placeholder="Where to send user responses"
                                     value="{{ config.get('feedback_gift', {}).get('log_channel_id', '') }}">
                             </div>
@@ -1031,7 +1032,7 @@
                         <div class="card" style="margin-top:16px">
                             <h3>🔗 Logging Setup</h3>
                             <div class="form-group">
-                                <label for="fb_json_log_channel">Log Channel ID</label>
+                                <label for="fb_json_log_channel">Log Channel ID or Link</label>
                                 <input type="text" id="fb_json_log_channel" placeholder="Where to send user responses">
                             </div>
                             <div class="form-group">

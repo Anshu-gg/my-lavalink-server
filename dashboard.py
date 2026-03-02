@@ -971,12 +971,16 @@ def send_embed():
     if data.get("description"):
         embed["description"] = data["description"]
     if data.get("color"):
-        # Convert hex color to integer
-        hex_color = data["color"].lstrip("#")
-        try:
-            embed["color"] = int(hex_color, 16)
-        except ValueError:
-            embed["color"] = 5793266  # Default blurple
+        import numbers
+        if isinstance(data["color"], numbers.Integral):
+            embed["color"] = data["color"]
+        else:
+            # Convert hex color to integer
+            hex_color = str(data["color"]).lstrip("#")
+            try:
+                embed["color"] = int(hex_color, 16)
+            except ValueError:
+                embed["color"] = 5793266  # Default blurple
 
     if data.get("author_name"):
         embed["author"] = {"name": data["author_name"]}
@@ -1081,8 +1085,12 @@ def edit_discord_message():
     if data.get("title"):       embed["title"] = data["title"]
     if data.get("description"): embed["description"] = data["description"]
     if data.get("color"):
-        try:    embed["color"] = int(data["color"].lstrip("#"), 16)
-        except: embed["color"] = 5793266
+        import numbers
+        if isinstance(data["color"], numbers.Integral):
+            embed["color"] = data["color"]
+        else:
+            try:    embed["color"] = int(str(data["color"]).lstrip("#"), 16)
+            except: embed["color"] = 5793266
     if data.get("author_name"):
         embed["author"] = {"name": data["author_name"]}
         if data.get("author_icon"): embed["author"]["icon_url"] = data["author_icon"]
