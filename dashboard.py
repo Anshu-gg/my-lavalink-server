@@ -23,15 +23,7 @@ DISCORD_API = "https://discord.com/api/v10"
 OAUTH2_URL = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=identify%20guilds&prompt=consent"
 
 
-# Load or generate a persistent secret key for sessions
-SECRET_KEY_FILE = os.path.join(os.path.dirname(__file__), ".secret_key")
-if os.path.exists(SECRET_KEY_FILE):
-    with open(SECRET_KEY_FILE, "rb") as f:
-        app.secret_key = f.read()
-else:
-    app.secret_key = os.urandom(24)
-    with open(SECRET_KEY_FILE, "wb") as f:
-        f.write(app.secret_key)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_fallback_key_12345")
 
 # ─── Config ───────────────────────────────────────────────────────
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(hours=1)
