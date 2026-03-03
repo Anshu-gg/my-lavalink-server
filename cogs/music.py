@@ -42,35 +42,37 @@ class Music(commands.Cog):
 
     async def cog_load(self):
         """Fix connection issues and connect to Lavalink."""
-        node_uri = os.getenv("LAVALINK_URI")
-        node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
+        # Use .strip() to remove any accidental spaces/newlines from Render env vars
+        node_uri = os.getenv("LAVALINK_URI", "").strip().rstrip('/')
+        node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass").strip()
 
         if not node_uri:
-            print("⚠️ LAVALINK_URI not found in environment variables.")
+            print("⚠️ LAVALINK_URI not found! Set it in Render Dashboard -> Environment.")
             return
 
         # ─── Fix Port/SSL for Render ──────────────────────────────────
-        node_uri = node_uri.rstrip('/')
-        if "onrender.com" in node_uri and not any(char.isdigit() for char in node_uri.split('/')[-1]):
-             # If no port specified for a Render URL, ensure it uses 443
-             if not (node_uri.startswith("http://") or node_uri.startswith("https://")):
+        # If it's a Render URL and missing https://, add it
+        if "onrender.com" in node_uri:
+             if not node_uri.startswith("http"):
                  node_uri = f"https://{node_uri}"
-             if ":" not in node_uri.replace("https://", ""):
+             
+             # If missing port, explicitly append :443 for HTTPS
+             # We check if ':' exists AFTER the https:// part
+             if ":" not in node_uri.replace("https://", "").replace("http://", ""):
                  node_uri = f"{node_uri}:443"
 
         # ─── Pre-flight Diagnostic ─────────────────────────────────────
-        print(f"📡 Wavelink: Running diagnostic on {node_uri}...")
+        print(f"📡 Wavelink: Diagnostic check for {node_uri}...")
         try:
             async with aiohttp.ClientSession() as session:
-                # Test if we can even reach the server
-                async with session.get(f"{node_uri}/version", headers={"Authorization": node_password}, timeout=10) as resp:
+                async with session.get(f"{node_uri}/version", headers={"Authorization": node_password}, timeout=15) as resp:
                     if resp.status == 200:
                         ver = await resp.text()
-                        print(f"✅ Lavalink Connection Pre-check: Success (Version: {ver})")
+                        print(f"✅ Lavalink Online! (Version: {ver})")
                     else:
-                        print(f"❌ Lavalink Pre-check Failed: HTTP {resp.status}")
+                        print(f"❌ Lavalink Rejected Connection: HTTP {resp.status} (Check Password)")
         except Exception as e:
-             print(f"⚠️ Lavalink Pre-check Warning (Likely Network/SSL): {e}")
+             print(f"⚠️ Lavalink Connection Test Failed: {e}")
 
         try:
             # Wavelink 3.x Node setup
