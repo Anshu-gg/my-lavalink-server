@@ -15,28 +15,7 @@ load_dotenv()
 
 # ─── Config Helper ────────────────────────────────────────────────
 
-BASE_DIR = os.path.dirname(__file__)
-
-def get_guild_file(guild_id, filename):
-    folder = os.path.join(BASE_DIR, "data", str(guild_id))
-    os.makedirs(folder, exist_ok=True)
-    return os.path.join(folder, filename)
-
-def load_config(guild_id=None):
-    """Read config.json and return as a dict. If no guild_id, returns empty dict."""
-    if not guild_id:
-        return {}
-    path = get_guild_file(guild_id, "config.json")
-    if not os.path.exists(path):
-        return {}
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_config(guild_id, data):
-    """Write updated config back to config.json."""
-    if not guild_id: return
-    with open(get_guild_file(guild_id, "config.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+from db import load_config, save_config, load_server_logins, save_server_logins
 
 
 # ─── Dynamic Prefix ──────────────────────────────────────────────
@@ -84,17 +63,6 @@ def get_commands_list():
 bot.get_commands_list = get_commands_list
 
 # ─── Owner Dashboard Credential Commands ──────────────────────────
-
-SERVER_LOGINS_FILE = os.path.join(os.path.dirname(__file__), "server_logins.json")
-
-def load_server_logins():
-    if not os.path.exists(SERVER_LOGINS_FILE): return {}
-    with open(SERVER_LOGINS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_server_logins(data):
-    with open(SERVER_LOGINS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
 
 @bot.command(name="addlogin", help="[Owner Only] Add dashboard login for a Server ID. Usage: !addlogin <server_id> <login_id> <password>")
 @commands.is_owner()

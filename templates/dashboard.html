@@ -2809,7 +2809,7 @@
         // ─── Format JSON ──────────────────────────────────────
         function formatJson(panelId) {
             const cm = cmEditors[panelId];
-            if (!cm) return;
+            if (!cm) { showToast('❌ Switch to JSON mode first', 'error'); return; }
             try {
                 const parsed = JSON.parse(cm.getValue());
                 cm.setValue(JSON.stringify(parsed, null, 2));
@@ -2820,22 +2820,34 @@
         // ─── Copy JSON ────────────────────────────────────────
         async function copyJson(panelId) {
             const cm = cmEditors[panelId];
-            if (!cm) return;
+            if (!cm) { showToast('❌ Switch to JSON mode first', 'error'); return; }
             try {
-                await navigator.clipboard.writeText(cm.getValue());
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(cm.getValue());
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = cm.getValue();
+                    document.body.appendChild(ta); ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
                 showToast('📋 Copied to clipboard!');
-            } catch (e) { showToast('❌ Copy failed', 'error'); }
+            } catch (e) { showToast('❌ Copy failed: ' + e.message, 'error'); }
         }
 
         // ─── Paste JSON ───────────────────────────────────────
         async function pasteJson(panelId) {
             const cm = cmEditors[panelId];
-            if (!cm) return;
+            if (!cm) { showToast('❌ Switch to JSON mode first', 'error'); return; }
             try {
-                const text = await navigator.clipboard.readText();
-                cm.setValue(text);
-                showToast('📥 Pasted from clipboard!');
-            } catch (e) { showToast('❌ Clipboard access denied', 'error'); }
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    cm.setValue(text);
+                    showToast('📥 Pasted from clipboard!');
+                } else {
+                    showToast('❌ Paste not supported on this browser — use Ctrl+V in the editor', 'error');
+                }
+            } catch (e) { showToast('❌ Clipboard access denied — allow clipboard permission or use Ctrl+V', 'error'); }
         }
 
         // ─── Clear JSON editor ────────────────────────────────
@@ -3281,6 +3293,7 @@
                 // Sync Visual -> JSON
                 if (tmplCmEditor) {
                     tmplCmEditor.setValue(JSON.stringify(buildTmplPayload(), null, 2));
+                    setTimeout(() => tmplCmEditor.refresh(), 10);
                 }
             } else if (sub === 'visual') {
                 // Sync JSON -> Visual
@@ -3471,15 +3484,27 @@
 
         // Format / copy helpers for Raw tab
         function formatTmplJson() {
-            if (!tmplCmEditor) return;
+            if (!tmplCmEditor) { showToast('❌ Switch to Raw tab first', 'error'); return; }
             try {
                 const pretty = JSON.stringify(JSON.parse(tmplCmEditor.getValue()), null, 2);
                 tmplCmEditor.setValue(pretty);
+                showToast('⚡ JSON formatted');
             } catch { showToast('❌ Invalid JSON', 'error'); }
         }
-        function copyTmplJson() {
-            if (!tmplCmEditor) return;
-            navigator.clipboard.writeText(tmplCmEditor.getValue()).then(() => showToast('📋 Copied!'));
+        async function copyTmplJson() {
+            if (!tmplCmEditor) { showToast('❌ Switch to Raw tab first', 'error'); return; }
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(tmplCmEditor.getValue());
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = tmplCmEditor.getValue();
+                    document.body.appendChild(ta); ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                showToast('📋 Copied!');
+            } catch (e) { showToast('❌ Copy failed: ' + e.message, 'error'); }
         }
 
         // ─── Collapsible embed log toggle ──────────────────────

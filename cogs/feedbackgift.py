@@ -5,28 +5,11 @@ import os
 import asyncio
 from datetime import datetime, timezone
 
+from db import load_feedback_claims, save_feedback_claims, load_feedback_events, save_feedback_events
+
 class FeedbackGift(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
-        self.events_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "feedback_events.json")
-        self.claims_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "feedback_claims.json")
-
-
-    def get_guild_file(self, guild_id, filename):
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        folder = os.path.join(base_dir, "data", str(guild_id))
-        os.makedirs(folder, exist_ok=True)
-        return os.path.join(folder, filename)
-
-    def _load_claims(self, guild_id):
-        path = self.get_guild_file(guild_id, "feedback_claims.json")
-        if not os.path.exists(path): return {}
-        with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-    def _save_claims(self, guild_id, data):
-        with open(self.get_guild_file(guild_id, "feedback_claims.json"), "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
 
 
     @commands.command(name="reward", help="Claim the active feedback reward.")
@@ -46,8 +29,8 @@ class FeedbackGift(commands.Cog):
         user_id_str = str(ctx.author.id)
         
         # Load claims to check if already claimed
-        g_data = self._load_events()
-        legacy_claims = self._load_claims(ctx.guild.id)
+        g_data = load_feedback_events(ctx.guild.id)
+        legacy_claims = load_feedback_claims(ctx.guild.id)
         claims = {}
         
         if event_id and event_id in g_data:
@@ -133,10 +116,10 @@ class FeedbackGift(commands.Cog):
         
         if event_id and event_id in g_data:
             g_data[event_id].setdefault("claims", {})[user_id_str] = claim_info
-            self._save_events(g_data)
+            save_feedback_events(ctx.guild.id, g_data)
         else:
             legacy_claims[user_id_str] = claim_info
-            self._save_claims(ctx.guild.id, legacy_claims)
+            save_feedback_claims(ctx.guild.id, legacy_claims)
             
         em = discord.Embed(
             title="✅ Reward Sent!",
@@ -173,11 +156,11 @@ class FeedbackGift(commands.Cog):
         if event_id and event_id in g_data:
             if user_id_str in g_data[event_id].setdefault("claims", {}):
                 g_data[event_id]["claims"][user_id_str]["response"] = response_msg.content
-                self._save_events(g_data)
+                save_feedback_events(ctx.guild.id, g_data)
         else:
             if user_id_str in legacy_claims:
                 legacy_claims[user_id_str]["response"] = response_msg.content
-                self._save_claims(ctx.guild.id, legacy_claims)
+                save_feedback_claims(ctx.guild.id, legacy_claims)
         
         if not log_channel_id:
             try:

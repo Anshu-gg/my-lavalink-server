@@ -9,30 +9,7 @@ import discord
 from discord.ext import commands
 
 # File to track who has already claimed
-
-def get_guild_file(guild_id, filename):
-    base_dir = os.path.dirname(os.path.dirname(__file__))
-    folder = os.path.join(base_dir, "data", str(guild_id))
-    os.makedirs(folder, exist_ok=True)
-    return os.path.join(folder, filename)
-
-def load_claims(guild_id):
-    path = get_guild_file(guild_id, "claims.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_claims(guild_id, data):
-    with open(get_guild_file(guild_id, "claims.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-def load_giveaways(guild_id):
-    path = get_guild_file(guild_id, "giveaways.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_giveaways(guild_id, data):
-    with open(get_guild_file(guild_id, "giveaways.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+from db import load_claims, save_claims, load_giveaways, save_giveaways
 
 class FreeGiveaway(commands.Cog):
     """Free giveaway system — set a gift and let users claim it."""

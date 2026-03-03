@@ -41,120 +41,46 @@ else:
     app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-# ─── Paths ────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(__file__)
-ADMIN_ACCOUNTS_FILE = os.path.join(BASE_DIR, "admin_accounts.json")
-AUDIT_LOGS_FILE = os.path.join(BASE_DIR, "audit_logs.json")
+# ─── Data Storage Handlers ─────────────────────────────────────
+# We now rely exclusively on db.py for MongoDB storage to survive Render deploys.
 
-def get_guild_file(guild_id, filename):
-    folder = os.path.join(BASE_DIR, "data", str(guild_id))
-    os.makedirs(folder, exist_ok=True)
-    return os.path.join(folder, filename)
+from db import (
+    load_config, save_config,
+    load_claims, save_claims,
+    load_giveaways, save_giveaways,
+    load_feedback_claims, save_feedback_claims,
+    load_feedback_events, save_feedback_events,
+    load_message_log, save_message_log,
+    load_templates, save_templates,
+    load_admin_accounts, save_admin_accounts,
+    load_audit_logs, save_audit_logs,
+    load_owner, save_owner,
+    load_server_logins, save_server_logins,
+)
 
-def load_config(guild_id):
-    path = get_guild_file(guild_id, "config.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_config(guild_id, data):
-    with open(get_guild_file(guild_id, "config.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_claims(guild_id):
-    path = get_guild_file(guild_id, "claims.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_claims(guild_id, data):
-    with open(get_guild_file(guild_id, "claims.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-def load_giveaways(guild_id):
-    path = get_guild_file(guild_id, "giveaways.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_giveaways(guild_id, data):
-    with open(get_guild_file(guild_id, "giveaways.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-def load_feedback_claims(guild_id):
-    path = get_guild_file(guild_id, "feedback_claims.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_feedback_claims(guild_id, data):
-    with open(get_guild_file(guild_id, "feedback_claims.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-def load_feedback_events(guild_id):
-    path = get_guild_file(guild_id, "feedback_events.json")
-    if not os.path.exists(path): return {}
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_feedback_events(guild_id, data):
-    with open(get_guild_file(guild_id, "feedback_events.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-def load_message_log(guild_id):
-    path = get_guild_file(guild_id, "message_log.json")
-    if not os.path.exists(path): return []
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_message_log(guild_id, data):
-    with open(get_guild_file(guild_id, "message_log.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_templates(guild_id):
-    path = get_guild_file(guild_id, "templates.json")
-    if not os.path.exists(path): return []
-    with open(path, "r", encoding="utf-8") as f: return json.load(f)
-
-def save_templates(guild_id, data):
-    with open(get_guild_file(guild_id, "templates.json"), "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_admin_accounts():
-    if not os.path.exists(ADMIN_ACCOUNTS_FILE):
-        return {}
-    with open(ADMIN_ACCOUNTS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_admin_accounts(data):
-    with open(ADMIN_ACCOUNTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+# These functions are now imported from db.py
 
 def log_dashboard_action(action, login_id="", guild_id="", status="Success"):
-    """Helper to log dashboard access attempts and actions."""
+    """Helper to log dashboard access attempts and actions globally."""
     user = session.get("user")
-    if not user:
-        return
-        
     log_entry = {
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "discord_username": user.get("username", "Unknown"),
-        "discord_id": user.get("id", "Unknown"),
-        "action": action,
-        "dashboard_login_id": login_id,
+        "discord_username": user.get("username", "Unknown") if user else "Unknown",
+        "discord_id": user.get("id", "Unknown") if user else "Unknown",
+        "login_id": login_id,
         "guild_id": guild_id,
+        "action": action,
         "status": status,
         "ip_address": request.remote_addr
     }
     
-    logs = []
-    if os.path.exists(AUDIT_LOGS_FILE):
-        try:
-            with open(AUDIT_LOGS_FILE, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        except Exception:
-            pass
+    logs = load_audit_logs()
             
     # keep only the last 500 logs to prevent file bloating
     logs.insert(0, log_entry)
     logs = logs[:500]
     
-    with open(AUDIT_LOGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(logs, f, indent=2)
+    save_audit_logs(logs)
 
 
 def is_owner():
@@ -168,9 +94,9 @@ def is_owner():
     if env_owner_id:
         return str(user["id"]) == str(env_owner_id).strip()
         
-    owner_file = os.path.join(BASE_DIR, "owner.json")
-    if not os.path.exists(owner_file):
-        # If no owner.json, fetch the true owner from Discord application info
+    owner_data = load_owner()
+    if not owner_data.get("owner_id"):
+        # If no owner doc, fetch the true owner from Discord application info
         token = os.getenv("DISCORD_TOKEN")
         if token:
             try:
@@ -184,21 +110,16 @@ def is_owner():
                         real_owner_id = app_data["owner"]["id"]
                         
                     if real_owner_id:
-                        with open(owner_file, "w", encoding="utf-8") as f:
-                            json.dump({"owner_id": real_owner_id}, f, indent=2)
+                        save_owner({"owner_id": real_owner_id})
                         return str(user["id"]) == str(real_owner_id)
             except Exception:
                 pass
                 
         # If token fails or is missing, fall back to first login (dangerous on cloud, but backwards compatible locally)
-        with open(owner_file, "w", encoding="utf-8") as f:
-            json.dump({"owner_id": user["id"]}, f, indent=2)
+        save_owner({"owner_id": user["id"]})
         return True
         
-    with open(owner_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        
-    return str(user["id"]) == str(data.get("owner_id"))
+    return str(user["id"]) == str(owner_data.get("owner_id"))
 
 
 def is_authenticated():
@@ -1231,6 +1152,7 @@ def send_template():
     # If the payload is already in Discord format (has embeds array or standard content string)
     if "embeds" in p or ("content" in p and "message_content" not in p):
         payload_to_send = p
+        embed = p.get("embeds", [{}])[0] if p.get("embeds") else {}
     else:
         # Fallback: converts old flat payload format to Discord format
         embed = {}
