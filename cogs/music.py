@@ -86,11 +86,17 @@ class Music(commands.Cog):
 
             try:
                 print(f"📡 LOUD: Calling wavelink.Pool.connect()...", flush=True)
-                # Removed incorrect 'inactive_timeout' argument
-                node = wavelink.Node(uri=node_uri, password=node_password)
+                
+                # Use a cleaner URI for wavelink and be explicit about SSL
+                clean_uri = node_uri
+                use_ssl = node_uri.startswith("https")
+                
+                print(f"📡 LOUD: Node Config - URI: {clean_uri}, SSL: {use_ssl}", flush=True)
+                node = wavelink.Node(uri=clean_uri, password=node_password)
+                
                 await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
                 print("✅ LOUD: wavelink.Pool.connect() completed successfully!", flush=True)
-                break # Connection successful, exit the loop
+                break 
             except Exception as e:
                 print(f"❌ LOUD: Wavelink Connection Error: {e}. Retrying in 15 seconds...", flush=True)
                 await asyncio.sleep(15)
@@ -122,11 +128,29 @@ class Music(commands.Cog):
 
         await ctx.defer()
         
+        # PRE-CHECK: Ensure nodes are ready
+        nodes = wavelink.Pool.nodes
+        if not nodes:
+            return await ctx.send("❌ The Music Server (Lavalink) is not connected yet. Please wait a moment or try `/musicstatus`.")
+            
+        # Ensure at least one node is connected
+        connected_node = False
+        for node in nodes.values():
+            if node.status == wavelink.NodeStatus.CONNECTED:
+                connected_node = True
+                break
+        
+        if not connected_node:
+            return await ctx.send("❌ The Music Server is currently RECONNECTING. Please wait a few seconds.")
+
         player: wavelink.Player = getattr(ctx.guild, "voice_client", None)
         if not player:
             try:
-                player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+                print(f"📡 LOUD: Connecting to {ctx.author.voice.channel.name} with 60s timeout...", flush=True)
+                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=60, self_deaf=True)
+                print("✅ LOUD: Voice connection established.", flush=True)
             except Exception as e:
+                print(f"❌ LOUD: Voice Connection Error: {e}", flush=True)
                 return await ctx.send(f"❌ Connection error: {e}")
 
         tracks: wavelink.Search = await wavelink.Playable.search(search)
