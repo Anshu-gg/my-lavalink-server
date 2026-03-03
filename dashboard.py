@@ -1172,6 +1172,12 @@ def send_template():
         )
         if resp.status_code in (200, 201):
             msg_id = resp.json().get("id", "")
+            
+            # Save the channel ID to the template for convenience
+            if tmpl.get("last_channel_id") != channel_id:
+                tmpl["last_channel_id"] = channel_id
+                save_templates(guild_id, templates)
+                
             log = load_message_log(guild_id)
             log.insert(0, {
                 "id": msg_id, "channel_id": channel_id,

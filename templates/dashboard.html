@@ -3238,6 +3238,8 @@
             set('tmpl_footer_text', isFlat ? p.footer_text : em.footer?.text);
             set('tmpl_footer_icon', isFlat ? p.footer_icon : em.footer?.icon_url);
 
+            set('tmpl-send-channel', tmpl.last_channel_id || '');
+
             showMsgView('editor');
             switchTmplSubtab('visual', document.querySelector('.tmpl-subtab'));
             updateTmplPreview();
@@ -3248,6 +3250,7 @@
             editingTemplate = null;
             document.getElementById('tmpl-name-input').value = '';
             document.getElementById('tmpl-editor-breadname').textContent = 'New template';
+            document.getElementById('tmpl-send-channel').value = '';
             ['tmpl_content', 'tmpl_title', 'tmpl_description', 'tmpl_author_name',
                 'tmpl_thumbnail', 'tmpl_image', 'tmpl_footer_text'].forEach(id => {
                     const el = document.getElementById(id); if (el) el.value = '';
