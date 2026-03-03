@@ -170,15 +170,18 @@ async def on_member_join(member):
 
 async def load_cogs():
     """Dynamically load every .py file inside the cogs/ folder."""
+    print("📡 LOUD: Entering load_cogs()...")
     cogs_dir = os.path.join(os.path.dirname(__file__), "cogs")
     for filename in os.listdir(cogs_dir):
         if filename.endswith(".py") and not filename.startswith("__"):
             cog_name = f"cogs.{filename[:-3]}"
+            print(f"📡 LOUD: Attempting to load extension: {cog_name}")
             try:
                 await bot.load_extension(cog_name)
-                print(f"✅ Loaded cog: {cog_name}")
+                print(f"✅ LOUD: Successfully loaded: {cog_name}")
             except Exception as e:
-                print(f"❌ Failed to load {cog_name}: {e}")
+                print(f"❌ LOUD: Failed to load {cog_name}: {e}")
+    print("📡 LOUD: Finished load_cogs().")
 
 
 import asyncio
@@ -216,7 +219,9 @@ async def main():
         return
 
     async with bot:
+        print("📡 LOUD: Starting load_cogs() inside async with...")
         await load_cogs()
+        print("📡 LOUD: Calling bot.start()...")
         await bot.start(token)
 
 asyncio.run(main())
