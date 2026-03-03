@@ -18,14 +18,6 @@ class CustomCommands(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
-
-    def _load_config(self):
-        try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
 
     def _replace_vars(self, text, message, target=None):
         """Replace variables in text with actual values."""
@@ -275,7 +267,7 @@ class CustomCommands(commands.Cog):
         if not message.guild:
             return
 
-        cfg = self.bot.load_config(ctx.guild.id)
+        cfg = self.bot.load_config(message.guild.id)
         prefix = cfg.get("prefix", "!")
         custom_cmds = cfg.get("custom_commands", {})
 
