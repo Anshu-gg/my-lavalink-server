@@ -11,8 +11,7 @@ class Music(commands.Cog):
         nodes = [
             wavelink.Node(uri="https://lava-v4.moebot.com", password="youshallnotpass"),
             wavelink.Node(uri="http://lavalink.oops.wtf:2000", password="www.freelavalink.wtf"),
-            wavelink.Node(uri="http://node1.kappastein.de:80", password="youshallnotpass"),
-            wavelink.Node(uri="http://lava.link:80", password="youshallnotpass")
+            wavelink.Node(uri="http://node1.kappastein.de:80", password="youshallnotpass")
         ]
         
         # Connect to Lavalink
