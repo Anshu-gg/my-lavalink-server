@@ -91,7 +91,7 @@ class Music(commands.Cog):
                 use_ssl = node_uri.startswith("https")
                 print(f"📡 LOUD: Node Config - URI: {node_uri}, USE_HTTPS: {use_ssl}", flush=True)
                 
-                node = wavelink.Node(uri=node_uri, password=node_password, use_https=use_ssl)
+                node = wavelink.Node(uri=node_uri, password=node_password)
                 await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
                 print("✅ LOUD: wavelink.Pool.connect() completed successfully!", flush=True)
                 break 
