@@ -7,9 +7,13 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        # Provide a public node for testing. Users should replace this or host their own!
-        # This is a community-run public lavalink node from lavalink.top
-        nodes = [wavelink.Node(uri="http://lava.link:80", password="youshallnotpass")]
+        # Add multiple public nodes as fallbacks since some block cloud IPs (like Render)
+        nodes = [
+            wavelink.Node(uri="https://lava-v4.moebot.com", password="youshallnotpass"),
+            wavelink.Node(uri="http://lavalink.oops.wtf:2000", password="www.freelavalink.wtf"),
+            wavelink.Node(uri="http://node1.kappastein.de:80", password="youshallnotpass"),
+            wavelink.Node(uri="http://lava.link:80", password="youshallnotpass")
+        ]
         
         # Connect to Lavalink
         await wavelink.Pool.connect(nodes=nodes, client=self.bot, cache_capacity=100)
