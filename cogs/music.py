@@ -146,18 +146,27 @@ class Music(commands.Cog):
         player: wavelink.Player = getattr(ctx.guild, "voice_client", None)
         if not player:
             try:
+                # ─── Opus Pre-Check ───
                 if not discord.opus.is_loaded():
-                    print("⚠️ LOUD: Opus is not loaded! Attempting to load...", flush=True)
+                    print("📡 LOUD: Opus not loaded. Attempting to locate...", flush=True)
                     try:
                         discord.opus.load_opus("libopus.so.0" if os.name != "nt" else "libopus-0.x64.dll")
                     except:
-                        print("❌ LOUD: Failed to load Opus manually. Voice might fail.", flush=True)
-
-                print(f"📡 LOUD: Connecting to {ctx.author.voice.channel.name}...", flush=True)
-                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=30, self_deaf=True)
-                print("✅ LOUD: Voice connection successful.", flush=True)
+                        pass
+                
+                print(f"📡 LOUD: Join Request -> Channel: {ctx.author.voice.channel.name} (ID: {ctx.author.voice.channel.id})", flush=True)
+                print(f"📡 LOUD: Attempting connection with 120s timeout...", flush=True)
+                
+                # Increased timeout to 120s for Render's slower network
+                # Disabled self_deaf temporarily to ensure no permission issues
+                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=120, self_deaf=False)
+                
+                print("✅ LOUD: Voice connection HANDSHAKE completed!", flush=True)
+            except asyncio.TimeoutError:
+                print("❌ LOUD: Voice connection TIMED OUT after 120s.", flush=True)
+                return await ctx.send("❌ Discord Voice Servers are not responding! (Timeout). Please try again or check Bot Permissions.")
             except Exception as e:
-                print(f"❌ LOUD: Voice Connection failed: {e}", flush=True)
+                print(f"❌ LOUD: Voice connection error (Unexpected): {e}", flush=True)
                 return await ctx.send(f"❌ Could not join voice: {e}")
 
         print(f"📡 LOUD: Searching for: {search}", flush=True)
