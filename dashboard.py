@@ -364,13 +364,7 @@ def admin_dashboard():
         bot_guilds = []
         
     accounts = load_admin_accounts()
-    logs = []
-    if os.path.exists(AUDIT_LOGS_FILE):
-        try:
-            with open(AUDIT_LOGS_FILE, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        except Exception:
-            pass
+    logs = load_audit_logs()
         
     return render_template("admin.html", user=user, servers=bot_guilds, accounts=accounts, logs=logs, active_guild=session.get("active_guild"))
 
