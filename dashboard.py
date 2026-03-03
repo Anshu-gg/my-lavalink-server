@@ -1135,10 +1135,9 @@ def send_template():
 
     p = tmpl["payload"]
     
-    # If the payload is already in Discord format (has embeds array or standard content string)
-    if "embeds" in p or ("content" in p and "message_content" not in p):
+    # If the payload is already in standard Discord JSON format
+    if "embeds" in p or "content" in p:
         payload_to_send = p
-        embed = p.get("embeds", [{}])[0] if p.get("embeds") else {}
     else:
         # Fallback: converts old flat payload format to Discord format
         embed = {}

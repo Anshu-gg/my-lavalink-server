@@ -3426,9 +3426,20 @@
         async function saveTmplFromJson() {
             const name = document.getElementById('tmpl-name-input').value.trim();
             if (!name) { showToast('❌ Please enter a template name', 'error'); return; }
+
+            let payloadText = '{}';
+            if (tmplCmEditor) {
+                tmplCmEditor.save(); // sync to textarea just to be safe
+                payloadText = tmplCmEditor.getValue();
+            } else {
+                const ta = document.getElementById('tmpl-json-textarea');
+                if (ta) payloadText = ta.value || '{}';
+            }
+
             let payload;
-            try { payload = JSON.parse(tmplCmEditor ? tmplCmEditor.getValue() : '{}'); }
+            try { payload = JSON.parse(payloadText); }
             catch { showToast('❌ Invalid JSON — fix errors before saving', 'error'); return; }
+
             await doSaveTemplate(name, payload);
         }
 
