@@ -7,17 +7,21 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        # Use a large battery of nodes since free cloud providers (Render) are frequently IP-banned by public Lavalink hosts
-        nodes = [
-            wavelink.Node(uri="http://lavalink.oops.wtf:2000", password="www.freelavalink.wtf"),
-            wavelink.Node(uri="http://node1.kappastein.de:80", password="youshallnotpass"),
-            wavelink.Node(uri="https://lava-v4.moebot.com:443", password="youshallnotpass"),
-            wavelink.Node(uri="https://lavalink.lexnet.cc:443", password="youshallnotpass"),
-            wavelink.Node(uri="http://lava.link:80", password="youshallnotpass")
-        ]
-        
-        # Connect to Lavalink in the background so it doesn't block the bot from coming online
-        self.bot.loop.create_task(wavelink.Pool.connect(nodes=nodes, client=self.bot, cache_capacity=100))
+        import os
+        # Load from Environment Variables (Render Dashboard -> Environment)
+        node_uri = os.getenv("LAVALINK_URI")
+        node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
+
+        if not node_uri:
+            print("⚠️ LAVALINK_URI not found in environment variables. Music commands will not work until a node is provided.")
+            return
+
+        try:
+            node = wavelink.Node(uri=node_uri, password=node_password)
+            # Connect to Lavalink in the background so it doesn't block the bot from coming online
+            self.bot.loop.create_task(wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100))
+        except Exception as e:
+            print(f"❌ Failed to set up Wavelink Node: {e}")
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
