@@ -23,19 +23,25 @@ def get_db():
     if _db is not None:
         return _db
 
-    uri = os.getenv("MONGODB_URI", "")
+    uri = os.getenv("MONGODB_URI", "").strip()
     if not uri:
+        print("❌ LOUD: MONGODB_URI is missing!")
         raise RuntimeError(
             "MONGODB_URI environment variable is not set. "
             "Add it to your .env file or Render environment variables."
         )
 
-    _client = MongoClient(uri, serverSelectionTimeoutMS=5000)
-    # Force a connection test on first call
-    _client.admin.command("ping")
-    _db = _client["discord_bot"]
-    print("✅ Connected to MongoDB Atlas")
-    return _db
+    print(f"📡 LOUD: Connecting to MongoDB Atlas (URI prefix: {uri[:20]}...)")
+    try:
+        _client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+        # Force a connection test on first call
+        _client.admin.command("ping")
+        _db = _client["discord_bot"]
+        print("✅ LOUD: Successfully connected to MongoDB Atlas")
+        return _db
+    except Exception as e:
+        print(f"❌ LOUD: MongoDB Connection Failed: {e}")
+        raise e
 
 
 # ─── Internal helpers ─────────────────────────────────────────────
