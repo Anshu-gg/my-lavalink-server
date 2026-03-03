@@ -85,6 +85,19 @@ class Music(commands.Cog):
 
     # ─── Music Commands ─────────────────────────────────────────────
 
+    @commands.hybrid_command(name="musicstatus", description="Check the status of the Lavalink node.")
+    async def musicstatus(self, ctx: commands.Context):
+        nodes = wavelink.Pool.nodes
+        if not nodes:
+            return await ctx.send("❌ No Lavalink nodes are currently registered in the pool.")
+        
+        status_text = ""
+        for identifier, node in nodes.items():
+            status_text += f"Node: `{identifier}`\nStatus: `{node.status}`\nURI: `{node.uri}`\n\n"
+        
+        embed = discord.Embed(title="🎵 Music Status", description=status_text, color=discord.Color.blue())
+        await ctx.send(embed=embed)
+
     @commands.hybrid_command(name="play", description="Plays a song or search query.")
     @app_commands.describe(search="The song to play (URL or keywords)")
     async def play(self, ctx: commands.Context, *, search: str):

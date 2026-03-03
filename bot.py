@@ -190,10 +190,12 @@ async def main():
     from dashboard import run_dashboard
     dashboard_thread = threading.Thread(target=run_dashboard, daemon=True)
     dashboard_thread.start()
-    print("🌐 Dashboard running at http://localhost:5000")
+    print("🌐 LOUD: Dashboard thread started!")
+    print("🌐 LOUD: Dashboard running at http://localhost:5000")
 
     # Check token before trying to connect
     token = os.getenv("DISCORD_TOKEN")
+    print(f"📡 LOUD: Attempting to start bot with token prefix: {token[:10] if token else 'NONE'}...")
     if not token or token == "your-bot-token-here":
         print("\n" + "=" * 55)
         print("❌ ERROR: No valid bot token found!")
