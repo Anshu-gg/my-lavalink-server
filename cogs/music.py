@@ -123,35 +123,38 @@ class Music(commands.Cog):
     @commands.hybrid_command(name="play", description="Plays a song or search query.")
     @app_commands.describe(search="The song to play (URL or keywords)")
     async def play(self, ctx: commands.Context, *, search: str):
+        # ─── 1. Instant Defer to prevent timeout ───
+        await ctx.defer()
+        
         if not ctx.author.voice:
             return await ctx.send("❌ You must be in a voice channel!")
 
-        await ctx.defer()
-        
         # PRE-CHECK: Ensure nodes are ready
         nodes = wavelink.Pool.nodes
         if not nodes:
-            return await ctx.send("❌ The Music Server (Lavalink) is not connected yet. Please wait a moment or try `/musicstatus`.")
+            return await ctx.send("❌ The Music Server (Lavalink) is not connected yet. Please wait a moment.")
             
         # Ensure at least one node is connected
-        connected_node = False
+        connected_node = None
         for node in nodes.values():
             if node.status == wavelink.NodeStatus.CONNECTED:
-                connected_node = True
+                connected_node = node
                 break
         
         if not connected_node:
+            print("⚠️ LOUD: Play command called but no nodes are CONNECTED.", flush=True)
             return await ctx.send("❌ The Music Server is currently RECONNECTING. Please wait a few seconds.")
 
         player: wavelink.Player = getattr(ctx.guild, "voice_client", None)
         if not player:
             try:
-                print(f"📡 LOUD: Connecting to {ctx.author.voice.channel.name} with 60s timeout...", flush=True)
-                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=60, self_deaf=True)
-                print("✅ LOUD: Voice connection established.", flush=True)
+                print(f"📡 LOUD: Connecting to {ctx.author.voice.channel.name}...", flush=True)
+                # Important: Use self_deaf=True for better performance on Render
+                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=30, self_deaf=True)
+                print("✅ LOUD: Voice connection successful.", flush=True)
             except Exception as e:
-                print(f"❌ LOUD: Voice Connection Error: {e}", flush=True)
-                return await ctx.send(f"❌ Connection error: {e}")
+                print(f"❌ LOUD: Voice Connection failed: {e}", flush=True)
+                return await ctx.send(f"❌ Could not join voice: {e}")
 
         tracks: wavelink.Search = await wavelink.Playable.search(search)
         if not tracks:
