@@ -48,7 +48,12 @@ class Music(commands.Cog):
     async def connect_node(self):
         """Robust background task to connect to Lavalink with retries."""
         print("📡 LOUD: Music Cog - connect_node() background task started.", flush=True)
-        
+
+        # Wait for bot to be fully ready before connecting to Lavalink
+        await self.bot.wait_until_ready()
+        print("📡 LOUD: Bot is ready. Waiting 5 seconds before connecting to Lavalink...", flush=True)
+        await asyncio.sleep(5)
+
         node_uri = os.getenv("LAVALINK_URI", "").strip().rstrip('/')
         node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass").strip()
 
@@ -69,13 +74,13 @@ class Music(commands.Cog):
         while True:
             retry_count += 1
             print(f"🔄 LOUD: Lavalink Connection Attempt #{retry_count}...", flush=True)
-            
+
             # ─── Pre-flight Diagnostic ──────────────────────
             # This wakes up the Lavalink node if it is sleeping on Render
             try:
                 print(f"📡 LOUD: Pinging Lavalink version endpoint... (Attempt {retry_count})", flush=True)
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f"{node_uri}/version", headers={"Authorization": node_password}, timeout=15) as resp:
+                    async with session.get(f"{node_uri}/version", headers={"Authorization": node_password}, timeout=30) as resp:
                         if resp.status == 200:
                             ver = await resp.text()
                             print(f"✅ LOUD: Lavalink version check SUCCESS: {ver}", flush=True)
@@ -86,18 +91,22 @@ class Music(commands.Cog):
 
             try:
                 print(f"📡 LOUD: Calling wavelink.Pool.connect()...", flush=True)
-                
+
                 # Be explicit about SSL for Render's https URLs
                 use_ssl = node_uri.startswith("https")
                 print(f"📡 LOUD: Node Config - URI: {node_uri}, USE_HTTPS: {use_ssl}", flush=True)
-                
+
+                # Increase timeout to 60 seconds for Render's slower startup
                 node = wavelink.Node(uri=node_uri, password=node_password)
-                await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
+                await asyncio.wait_for(wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100), timeout=60)
                 print("✅ LOUD: wavelink.Pool.connect() completed successfully!", flush=True)
-                break 
+                break
+            except asyncio.TimeoutError:
+                print(f"❌ LOUD: Wavelink Connection Timeout (60s exceeded). Lavalink may be starting. Retrying in 30 seconds...", flush=True)
+                await asyncio.sleep(30)
             except Exception as e:
-                print(f"❌ LOUD: Wavelink Connection Error: {e}. Retrying in 15 seconds...", flush=True)
-                await asyncio.sleep(15)
+                print(f"❌ LOUD: Wavelink Connection Error: {e}. Retrying in 30 seconds...", flush=True)
+                await asyncio.sleep(30)
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
@@ -123,25 +132,26 @@ class Music(commands.Cog):
     async def play(self, ctx: commands.Context, *, search: str):
         # ─── 1. Instant Defer to prevent timeout ───
         await ctx.defer()
-        
+
         if not ctx.author.voice:
-            return await ctx.send("❌ You must be in a voice channel!")
+            return await ctx.followup.send("❌ You must be in a voice channel!")
 
         # PRE-CHECK: Ensure nodes are ready
         nodes = wavelink.Pool.nodes
         if not nodes:
-            return await ctx.send("❌ The Music Server (Lavalink) is not connected yet. Please wait a moment.")
-            
-        # Ensure at least one node is connected
-        connected_node = None
+            return await ctx.followup.send("❌ The Music Server (Lavalink) is not connected yet. Please wait a moment.")
+
+        # Ensure at least one node is READY (not just connected)
+        ready_node = None
         for node in nodes.values():
-            if node.status == wavelink.NodeStatus.CONNECTED:
-                connected_node = node
+            print(f"📊 LOUD: Node '{node.identifier}' Status: {node.status} | Is Ready: {node.is_ready()}", flush=True)
+            if node.is_ready():
+                ready_node = node
                 break
-        
-        if not connected_node:
-            print("⚠️ LOUD: Play command called but no nodes are CONNECTED.", flush=True)
-            return await ctx.send("❌ The Music Server is currently RECONNECTING. Please wait a few seconds.")
+
+        if not ready_node:
+            print("⚠️ LOUD: Play command called but no nodes are READY.", flush=True)
+            return await ctx.followup.send("⏳ The Music Server is starting up. Please try again in 10-15 seconds.")
 
         player: wavelink.Player = getattr(ctx.guild, "voice_client", None)
         if not player:
@@ -153,32 +163,31 @@ class Music(commands.Cog):
                         discord.opus.load_opus("libopus.so.0" if os.name != "nt" else "libopus-0.x64.dll")
                     except:
                         pass
-                
+
                 print(f"📡 LOUD: Join Request -> Channel: {ctx.author.voice.channel.name} (ID: {ctx.author.voice.channel.id})", flush=True)
                 print(f"📡 LOUD: Attempting connection with 120s timeout...", flush=True)
-                
+
                 # Increased timeout to 120s for Render's slower network
-                # Disabled self_deaf temporarily to ensure no permission issues
-                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=120, self_deaf=False)
-                
+                player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=120, self_deaf=True)
+
                 print("✅ LOUD: Voice connection HANDSHAKE completed!", flush=True)
             except asyncio.TimeoutError:
                 print("❌ LOUD: Voice connection TIMED OUT after 120s.", flush=True)
-                return await ctx.send("❌ Discord Voice Servers are not responding! (Timeout). Please try again or check Bot Permissions.")
+                return await ctx.followup.send("❌ Lavalink server not responding. It may be starting or offline. Please try again in 30 seconds.")
             except Exception as e:
                 print(f"❌ LOUD: Voice connection error (Unexpected): {e}", flush=True)
-                return await ctx.send(f"❌ Could not join voice: {e}")
+                return await ctx.followup.send(f"❌ Could not join voice: {e}")
 
         print(f"📡 LOUD: Searching for: {search}", flush=True)
         try:
             tracks: wavelink.Search = await wavelink.Playable.search(search)
             if not tracks:
                 print(f"❌ LOUD: No tracks found for {search}", flush=True)
-                return await ctx.send(f"❌ No results found for: `{search}`")
+                return await ctx.followup.send(f"❌ No results found for: `{search}`")
             print(f"✅ LOUD: Found {len(tracks) if not isinstance(tracks, wavelink.Playlist) else 'Playlist'} tracks.", flush=True)
         except Exception as e:
             print(f"❌ LOUD: Search error: {e}", flush=True)
-            return await ctx.send(f"❌ Search error: {e}")
+            return await ctx.followup.send(f"❌ Search error: {e}")
 
         if isinstance(tracks, wavelink.Playlist):
             added = tracks.tracks
@@ -198,11 +207,11 @@ class Music(commands.Cog):
                 embed.title = "🎵 Now Playing"
             except Exception as e:
                 print(f"❌ LOUD: Playback error: {e}", flush=True)
-                return await ctx.send(f"❌ Playback error: {e}")
-        
+                return await ctx.followup.send(f"❌ Playback error: {e}")
+
         # Add control view
         view = MusicController(player)
-        await ctx.send(embed=embed, view=view)
+        await ctx.followup.send(embed=embed, view=view)
 
     @commands.hybrid_command(name="skip", description="Skip the current track.")
     async def skip(self, ctx: commands.Context):
