@@ -7,15 +7,13 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        # Add multiple public nodes as fallbacks since some block cloud IPs (like Render)
+        # Use a single reliable node to avoid timeout cascading
         nodes = [
-            wavelink.Node(uri="https://lava-v4.moebot.com", password="youshallnotpass"),
-            wavelink.Node(uri="http://lavalink.oops.wtf:2000", password="www.freelavalink.wtf"),
-            wavelink.Node(uri="http://node1.kappastein.de:80", password="youshallnotpass")
+            wavelink.Node(uri="http://lavalink.oops.wtf:2000", password="www.freelavalink.wtf")
         ]
         
-        # Connect to Lavalink
-        await wavelink.Pool.connect(nodes=nodes, client=self.bot, cache_capacity=100)
+        # Connect to Lavalink in the background so it doesn't block the bot from coming online
+        self.bot.loop.create_task(wavelink.Pool.connect(nodes=nodes, client=self.bot, cache_capacity=100))
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
