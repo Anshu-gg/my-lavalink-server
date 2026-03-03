@@ -45,12 +45,14 @@ class Music(commands.Cog):
         self.bot.loop.create_task(self.connect_node())
 
     async def connect_node(self):
-        """Non-blocking background task to handle diagnostics and connection."""
+        """Robust background task to connect to Lavalink with retries."""
+        print("📡 LOUD: Music Cog - connect_node() background task started.", flush=True)
+        
         node_uri = os.getenv("LAVALINK_URI", "").strip().rstrip('/')
         node_password = os.getenv("LAVALINK_PASSWORD", "youshallnotpass").strip()
 
         if not node_uri:
-            print("⚠️ LAVALINK_URI not set. Music commands will be disabled.")
+            print("⚠️ LOUD: LAVALINK_URI is missing from environment. Music status: DISABLED.", flush=True)
             return
 
         # ─── Fix Port/SSL for Render ──────────────────────────────────
@@ -60,24 +62,36 @@ class Music(commands.Cog):
              if ":" not in node_uri.replace("https://", "").replace("http://", ""):
                  node_uri = f"{node_uri}:443"
 
-        # ─── Pre-flight Diagnostic (Non-blocking) ──────────────────────
-        print(f"📡 Wavelink: Running background diagnostic on {node_uri}...")
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{node_uri}/version", headers={"Authorization": node_password}, timeout=10) as resp:
-                    if resp.status == 200:
-                        ver = await resp.text()
-                        print(f"✅ Lavalink Online! (Version: {ver})")
-                    else:
-                        print(f"❌ Lavalink Error: HTTP {resp.status} (Check Password)")
-        except Exception as e:
-             print(f"⚠️ Startup Hint: Still waiting for search node or network... ({e})")
+        print(f"📡 LOUD: Target Lavalink URI: {node_uri}", flush=True)
 
-        try:
-            node = wavelink.Node(uri=node_uri, password=node_password, inactive_timeout=60)
-            await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
-        except Exception as e:
-            print(f"❌ Wavelink Background Error: {e}")
+        retry_count = 0
+        while True:
+            retry_count += 1
+            print(f"🔄 LOUD: Lavalink Connection Attempt #{retry_count}...", flush=True)
+            
+            # ─── Pre-flight Diagnostic ──────────────────────
+            # This wakes up the Lavalink node if it is sleeping on Render
+            try:
+                print(f"📡 LOUD: Pinging Lavalink version endpoint... (Attempt {retry_count})", flush=True)
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f"{node_uri}/version", headers={"Authorization": node_password}, timeout=15) as resp:
+                        if resp.status == 200:
+                            ver = await resp.text()
+                            print(f"✅ LOUD: Lavalink version check SUCCESS: {ver}", flush=True)
+                        else:
+                            print(f"❌ LOUD: Lavalink version check FAILED: HTTP {resp.status}", flush=True)
+            except Exception as e:
+                print(f"⚠️ LOUD: Lavalink version check error (Node might be booting): {e}", flush=True)
+
+            try:
+                print(f"📡 LOUD: Calling wavelink.Pool.connect()...", flush=True)
+                node = wavelink.Node(uri=node_uri, password=node_password, inactive_timeout=60)
+                await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
+                print("✅ LOUD: wavelink.Pool.connect() completed successfully!", flush=True)
+                break # Connection successful, exit the loop
+            except Exception as e:
+                print(f"❌ LOUD: Wavelink Connection Error: {e}. Retrying in 15 seconds...", flush=True)
+                await asyncio.sleep(15)
 
     @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):

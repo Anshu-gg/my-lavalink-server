@@ -38,27 +38,27 @@ class MeteorBot(commands.Bot):
 
     async def setup_hook(self):
         """Standard initialization point for discord.py commands.Bot."""
-        print("📡 LOUD: Entering setup_hook()...")
+        print("📡 LOUD: Entering setup_hook()...", flush=True)
         
         # Start the web dashboard in a background thread
         from dashboard import run_dashboard
         dashboard_thread = threading.Thread(target=run_dashboard, daemon=True)
         dashboard_thread.start()
-        print("🌐 LOUD: Dashboard thread started on background.")
+        print("🌐 LOUD: Dashboard thread started on background.", flush=True)
 
         # Load Cogs
         cogs_dir = os.path.join(os.path.dirname(__file__), "cogs")
         for filename in os.listdir(cogs_dir):
             if filename.endswith(".py") and not filename.startswith("__"):
                 cog_name = f"cogs.{filename[:-3]}"
-                print(f"📡 LOUD: Attempting to load extension: {cog_name}")
+                print(f"📡 LOUD: Attempting to load extension: {cog_name}", flush=True)
                 try:
                     await self.load_extension(cog_name)
-                    print(f"✅ LOUD: Successfully loaded: {cog_name}")
+                    print(f"✅ LOUD: Successfully loaded: {cog_name}", flush=True)
                 except Exception as e:
-                    print(f"❌ LOUD: Failed to load {cog_name}: {e}")
+                    print(f"❌ LOUD: Failed to load {cog_name}: {e}", flush=True)
         
-        print("📡 LOUD: setup_hook() complete.")
+        print("📡 LOUD: setup_hook() complete.", flush=True)
 
 # ─── Create the Bot ──────────────────────────────────────────────
 bot = MeteorBot()
@@ -107,15 +107,15 @@ async def removelogin(ctx, guild_id: str):
 # ─── Events ──────────────────────────────────────────────────────
 @bot.event
 async def on_ready():
-    print(f"\n🤖 Bot is online! Logged in as {bot.user}")
-    print(f"📡 Serving {len(bot.guilds)} server(s)")
+    print(f"\n🤖 Bot is online! Logged in as {bot.user}", flush=True)
+    print(f"📡 Serving {len(bot.guilds)} server(s)", flush=True)
     try:
         for guild in bot.guilds:
             bot.tree.copy_global_to(guild=guild)
             await bot.tree.sync(guild=guild)
-        print(f"⚡ Synced slash commands to {len(bot.guilds)} server(s)")
+        print(f"⚡ Synced slash commands to {len(bot.guilds)} server(s)", flush=True)
     except Exception as e:
-        print(f"⚠️ Failed to sync slash commands: {e}")
+        print(f"⚠️ Failed to sync slash commands: {e}", flush=True)
     await bot.change_presence(activity=discord.Game(name="!help for commands"))
 
 @bot.event
@@ -152,10 +152,10 @@ async def on_member_join(member):
 if __name__ == "__main__":
     token = os.getenv("DISCORD_TOKEN")
     if token and token != "your-bot-token-here":
-        print(f"📡 LOUD: Starting bot with token prefix: {token[:10]}...")
+        print(f"📡 LOUD: Starting bot with token prefix: {token[:10]}...", flush=True)
         bot.run(token)
     else:
         # Emergency keep-alive for dashboard if token is missing
-        print("❌ LOUD: No valid DISCORD_TOKEN found. Only dashboard will start.")
+        print("❌ LOUD: No valid DISCORD_TOKEN found. Only dashboard will start.", flush=True)
         from dashboard import run_dashboard
         run_dashboard()
