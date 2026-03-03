@@ -1085,6 +1085,8 @@ def save_template_endpoint():
     import datetime
     data     = request.json
     name     = data.get("name", "").strip()
+    print(f"DEBUG: /api/templates received POST request to save template name='{name}' with data keys: {list(data.keys())}")
+    
     if not name: return jsonify({"error": "Template name is required"}), 400
 
     payload  = data.get("payload", {})
@@ -1134,18 +1136,31 @@ def send_template():
     if not tmpl: return jsonify({"error": "Template not found"}), 404
 
     p = tmpl["payload"]
+    payload_to_send = {}
     
-    # If the payload is already in standard Discord JSON format
-    if "embeds" in p or "content" in p:
-        payload_to_send = p
+    # Extract content
+    if "content" in p and p["content"]:
+        payload_to_send["content"] = p["content"]
+    elif "message_content" in p and p["message_content"]:
+        payload_to_send["content"] = p["message_content"]
+        
+    embeds = []
+    
+    # 1. Check if it's already an 'embeds' array (Modern format)
+    if "embeds" in p and isinstance(p["embeds"], list):
+        for e in p["embeds"]:
+            embeds.append(dict(e))
+            
+    # 2. Check if it's a singular 'embed' object (Older format)
+    elif "embed" in p and isinstance(p["embed"], dict):
+        embeds.append(dict(p["embed"]))
+        
+    # 3. Fallback: Flat structure (Very old format)
     else:
-        # Fallback: converts old flat payload format to Discord format
         embed = {}
         if p.get("title"):       embed["title"]       = p["title"]
         if p.get("description"): embed["description"]  = p["description"]
-        if p.get("color"):
-            try:    embed["color"] = int(p["color"].lstrip("#"), 16)
-            except: embed["color"] = 5793266
+        if p.get("color"):       embed["color"]       = p["color"]
         if p.get("author_name"):
             embed["author"] = {"name": p["author_name"]}
             if p.get("author_icon"): embed["author"]["icon_url"] = p["author_icon"]
@@ -1154,13 +1169,27 @@ def send_template():
         if p.get("footer_text"):
             embed["footer"] = {"text": p["footer_text"]}
             if p.get("footer_icon"): embed["footer"]["icon_url"] = p["footer_icon"]
+        
         fields = p.get("fields", [])
         if fields:
             embed["fields"] = [{"name": f["name"], "value": f["value"], "inline": f.get("inline", False)}
                                for f in fields if f.get("name") and f.get("value")]
-
-        payload_to_send = {"embeds": [embed]}
-        if p.get("message_content"): payload_to_send["content"] = p["message_content"]
+                               
+        if embed:  # Only add if it's not empty
+            embeds.append(embed)
+            
+    # --- SANITIZE EMBEDS ---
+    # Discord API requires colors to be integers. String hex colors like "#5865F2" will result in 400 Bad Request.
+    for e in embeds:
+        if "color" in e:
+            if isinstance(e["color"], str):
+                try:
+                    e["color"] = int(e["color"].lstrip("#"), 16)
+                except ValueError:
+                    e["color"] = 5793266 # Default blurple
+                    
+    if embeds:
+        payload_to_send["embeds"] = embeds
 
     bot_token = os.getenv("DISCORD_TOKEN", "")
     try:
