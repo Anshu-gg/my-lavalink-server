@@ -43,9 +43,10 @@ class Music(commands.Cog):
             # Leave channel if empty
             await player.disconnect()
 
-    @commands.hybrid_command(name="play", help="Play a song or add it to the queue.")
+    @commands.hybrid_command(name="play", help="Plays a song")
+    @discord.app_commands.describe(search="The song to play")
     async def play(self, ctx: commands.Context, *, search: str):
-        """Play a song from a search term or URL."""
+        """Plays a song"""
         if not ctx.author.voice:
             return await ctx.send("❌ You must be in a voice channel to play music!")
 
@@ -160,6 +161,35 @@ class Music(commands.Cog):
             
         await player.set_volume(volume)
         await ctx.send(f"🔊 Set volume to {volume}%")
+
+    @commands.hybrid_command(name="playfile", help="Play a file.")
+    async def playfile(self, ctx: commands.Context, file: discord.Attachment):
+        """Play a file."""
+        await ctx.send("Feature coming soon: Play a file!")
+
+    @commands.hybrid_command(name="playliked", help="Play or queue all liked songs.")
+    async def playliked(self, ctx: commands.Context):
+        """Play or queue all liked songs."""
+        await ctx.send("Feature coming soon: Play liked songs!")
+
+    # --- Playlist Group Commands ---
+    playlist = discord.app_commands.Group(name="playlist", description="Manage custom playlists")
+
+    @playlist.command(name="list", description="List all custom playlists.")
+    async def playlist_list(self, interaction: discord.Interaction):
+        await interaction.response.send_message("Feature coming soon: List playlists!")
+
+    @playlist.command(name="addcurrent", description="Add the current playing track to a custom playlist.")
+    async def playlist_addcurrent(self, interaction: discord.Interaction):
+        await interaction.response.send_message("Feature coming soon: Add current to playlist!")
+
+    @playlist.command(name="addnowplaying", description="Add current playing to a custom playlist.")
+    async def playlist_addnowplaying(self, interaction: discord.Interaction):
+        await interaction.response.send_message("Feature coming soon: Add now playing to playlist!")
+
+    @playlist.command(name="addqueue", description="Add the current playing queue to a custom playlist.")
+    async def playlist_addqueue(self, interaction: discord.Interaction):
+        await interaction.response.send_message("Feature coming soon: Add queue to playlist!")
 
 async def setup(bot):
     await bot.add_cog(Music(bot))
