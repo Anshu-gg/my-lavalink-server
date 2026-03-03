@@ -1176,7 +1176,8 @@ def send_template():
             log.insert(0, {
                 "id": msg_id, "channel_id": channel_id,
                 "sent_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "label": name, "payload": p, "embed_snapshot": embed,
+                "label": name, "payload": p, 
+                "embed_snapshot": payload_to_send.get("embeds", [{}])[0] if payload_to_send.get("embeds") else {},
             })
             save_message_log(guild_id, log[:50])
             return jsonify({"success": True, "message_id": msg_id})
