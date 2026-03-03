@@ -5,6 +5,7 @@ import wavelink
 import os
 import logging
 import aiohttp
+import asyncio
 from typing import Optional, List
 
 # Enable debug logging for wavelink
@@ -85,7 +86,8 @@ class Music(commands.Cog):
 
             try:
                 print(f"📡 LOUD: Calling wavelink.Pool.connect()...", flush=True)
-                node = wavelink.Node(uri=node_uri, password=node_password, inactive_timeout=60)
+                # Removed incorrect 'inactive_timeout' argument
+                node = wavelink.Node(uri=node_uri, password=node_password)
                 await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
                 print("✅ LOUD: wavelink.Pool.connect() completed successfully!", flush=True)
                 break # Connection successful, exit the loop
