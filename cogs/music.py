@@ -87,13 +87,11 @@ class Music(commands.Cog):
             try:
                 print(f"📡 LOUD: Calling wavelink.Pool.connect()...", flush=True)
                 
-                # Use a cleaner URI for wavelink and be explicit about SSL
-                clean_uri = node_uri
+                # Be explicit about SSL for Render's https URLs
                 use_ssl = node_uri.startswith("https")
+                print(f"📡 LOUD: Node Config - URI: {node_uri}, USE_HTTPS: {use_ssl}", flush=True)
                 
-                print(f"📡 LOUD: Node Config - URI: {clean_uri}, SSL: {use_ssl}", flush=True)
-                node = wavelink.Node(uri=clean_uri, password=node_password)
-                
+                node = wavelink.Node(uri=node_uri, password=node_password, use_https=use_ssl)
                 await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
                 print("✅ LOUD: wavelink.Pool.connect() completed successfully!", flush=True)
                 break 
@@ -148,39 +146,50 @@ class Music(commands.Cog):
         player: wavelink.Player = getattr(ctx.guild, "voice_client", None)
         if not player:
             try:
+                if not discord.opus.is_loaded():
+                    print("⚠️ LOUD: Opus is not loaded! Attempting to load...", flush=True)
+                    try:
+                        discord.opus.load_opus("libopus.so.0" if os.name != "nt" else "libopus-0.x64.dll")
+                    except:
+                        print("❌ LOUD: Failed to load Opus manually. Voice might fail.", flush=True)
+
                 print(f"📡 LOUD: Connecting to {ctx.author.voice.channel.name}...", flush=True)
-                # Important: Use self_deaf=True for better performance on Render
                 player = await ctx.author.voice.channel.connect(cls=wavelink.Player, timeout=30, self_deaf=True)
                 print("✅ LOUD: Voice connection successful.", flush=True)
             except Exception as e:
                 print(f"❌ LOUD: Voice Connection failed: {e}", flush=True)
                 return await ctx.send(f"❌ Could not join voice: {e}")
 
-        tracks: wavelink.Search = await wavelink.Playable.search(search)
-        if not tracks:
-            return await ctx.send(f"❌ No results found for: `{search}`")
+        print(f"📡 LOUD: Searching for: {search}", flush=True)
+        try:
+            tracks: wavelink.Search = await wavelink.Playable.search(search)
+            if not tracks:
+                print(f"❌ LOUD: No tracks found for {search}", flush=True)
+                return await ctx.send(f"❌ No results found for: `{search}`")
+            print(f"✅ LOUD: Found {len(tracks) if not isinstance(tracks, wavelink.Playlist) else 'Playlist'} tracks.", flush=True)
+        except Exception as e:
+            print(f"❌ LOUD: Search error: {e}", flush=True)
+            return await ctx.send(f"❌ Search error: {e}")
 
         if isinstance(tracks, wavelink.Playlist):
             added = tracks.tracks
             player.queue.put(added)
-            embed = discord.Embed(
-                title="🎵 Playlist Added", 
-                description=f"Added **{tracks.name}** ({len(added)} tracks)", 
-                color=discord.Color.purple()
-            )
+            embed = discord.Embed(title="🎵 Playlist Added", description=f"Added **{tracks.name}**", color=discord.Color.purple())
         else:
             track = tracks[0]
             player.queue.put(track)
-            embed = discord.Embed(
-                title="🎵 Track Loaded", 
-                description=f"**{track.title}**\nAdded to queue.", 
-                color=discord.Color.blue()
-            )
+            embed = discord.Embed(title="🎵 Track Loaded", description=f"**{track.title}**", color=discord.Color.blue())
             if track.artwork: embed.set_thumbnail(url=track.artwork)
 
         if not player.playing:
-            await player.play(player.queue.get())
-            embed.title = "🎵 Now Playing"
+            try:
+                print(f"📡 LOUD: Starting playback of {player.queue[0].title}...", flush=True)
+                await player.play(player.queue.get())
+                print("✅ LOUD: Playback started successfully.", flush=True)
+                embed.title = "🎵 Now Playing"
+            except Exception as e:
+                print(f"❌ LOUD: Playback error: {e}", flush=True)
+                return await ctx.send(f"❌ Playback error: {e}")
         
         # Add control view
         view = MusicController(player)
