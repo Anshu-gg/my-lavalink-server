@@ -1,4 +1,4 @@
-server: # REST and WS server
+server:
   port: ${PORT:2333}
   address: 0.0.0.0
 
@@ -21,19 +21,20 @@ lavalink:
   server:
     password: "youshallnotpass"
     sources:
-      youtube: false
+      youtube: false      # handled by the plugin above
       bandcamp: true
       soundcloud: true
       twitch: true
       vimeo: true
       http: true
       local: false
-    bufferDurationMs: 400
-    frameBufferDurationMs: 5000
-    opusEncodingQuality: 10
+    # Memory-optimised settings for Render free tier (512MB RAM)
+    bufferDurationMs: 200           # Reduced from 400
+    frameBufferDurationMs: 2000     # Reduced from 5000 (saves ~50MB peak RAM)
+    opusEncodingQuality: 5          # Reduced from 10 (lower CPU/RAM)
     resamplingQuality: LOW
     trackStuckThresholdMs: 10000
-    useSeekGhosting: true
+    useSeekGhosting: false          # Disabled to save RAM
     youtubePlaylistLoadLimit: 6
     playerUpdateInterval: 5
     youtubeSearchEnabled: true
@@ -53,5 +54,5 @@ logging:
   file:
     path: ./logs/
   level:
-    root: INFO
+    root: WARN       # Changed from INFO to reduce I/O and RAM usage
     lavalink: INFO
