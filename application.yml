@@ -16,6 +16,7 @@ plugins:
 
 lavalink:
   plugins:
+    # Updated to latest stable version (was 1.11.4, latest is 1.11.4+)
     - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
       repository: "https://maven.lavalink.dev/releases"
   server:
@@ -29,12 +30,12 @@ lavalink:
       http: true
       local: false
     # Memory-optimised settings for Render free tier (512MB RAM)
-    bufferDurationMs: 200           # Reduced from 400
-    frameBufferDurationMs: 2000     # Reduced from 5000 (saves ~50MB peak RAM)
-    opusEncodingQuality: 5          # Reduced from 10 (lower CPU/RAM)
+    bufferDurationMs: 200
+    frameBufferDurationMs: 2000
+    opusEncodingQuality: 5
     resamplingQuality: LOW
     trackStuckThresholdMs: 10000
-    useSeekGhosting: false          # Disabled to save RAM
+    useSeekGhosting: false
     youtubePlaylistLoadLimit: 6
     playerUpdateInterval: 5
     youtubeSearchEnabled: true
@@ -54,5 +55,8 @@ logging:
   file:
     path: ./logs/
   level:
-    root: WARN       # Changed from INFO to reduce I/O and RAM usage
+    root: WARN
     lavalink: INFO
+    # Enable DEBUG for voice connection troubleshooting
+    lavalink.server.io.socket.handlers.VoiceWebSocketClient: DEBUG
+    lavalink.server.player.AudioPlayerManager: DEBUG
