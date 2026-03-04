@@ -52,11 +52,10 @@ sentry:
   environment: ""
 
 logging:
-  file:
-    path: ./logs/
+  # No file logging — Render's disk is ephemeral/small and can fill up.
+  # All output goes to stdout (visible in Render's Logs tab).
   level:
     root: WARN
     lavalink: INFO
-    # Enable DEBUG for voice connection troubleshooting
     lavalink.server.io.socket.handlers.VoiceWebSocketClient: DEBUG
     lavalink.server.player.AudioPlayerManager: DEBUG
